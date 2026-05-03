@@ -35,3 +35,4 @@ jobs:
           git add index.m3u8
           git commit --allow-empty -m "Fix Mixed Content & Reset 3h - $(date)"
           git push
+          
