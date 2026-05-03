@@ -1,9 +1,9 @@
-name: FFmpeg Fix Mixed Content
+name: FFmpeg GitHub M3U8
 on:
   push:
     branches: [ main ]
   schedule:
-    - cron: '0 */3 * * *' # Tự động làm mới mỗi 3 tiếng
+    - cron: '0 */3 * * *' # Tự động chạy lại mỗi 3 tiếng
 
 jobs:
   ffmpeg-process:
@@ -17,22 +17,26 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Convert HTTP to HTTPS Stream
+      - name: Create Clean M3U8
         run: |
-          # Dùng -protocol_whitelist để cho phép FFmpeg đọc cả http và https cùng lúc
+          # Dùng FFmpeg lấy luồng và xử lý lỗi Mixed Content (http/https)
+          # -t 300: Cho FFmpeg chạy 5 phút để tạo ra một lượng segment (.ts) đủ lớn
+          # Điều này giúp link ổn định hơn khi nạp vào TV
+          
           ffmpeg -hide_banner -loglevel error \
           -protocol_whitelist file,http,https,tcp,tls \
           -headers "Referer: https://vietanhtv.id.vn/" \
+          -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
           -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
-          -t 60 -c copy -f hls -hls_time 10 -hls_list_size 6 -y index.m3u8
-          
-          sleep 5
+          -t 300 -c copy -absf aac_adtstoasc \
+          -hls_time 10 -hls_list_size 10 -hls_flags delete_segments \
+          -y index.m3u8
 
-      - name: Commit and Push
+      - name: Commit and Push to Public
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add index.m3u8
-          git commit --allow-empty -m "Fix Mixed Content & Reset 3h - $(date)"
+          # Đẩy file lên để TV có link raw để đọc
+          git commit --allow-empty -m "Update M3U8: $(date)"
           git push
-          
