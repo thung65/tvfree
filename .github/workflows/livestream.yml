@@ -1,4 +1,4 @@
-name: FFmpeg Loop Testcard Clean
+name: FFmpeg Loop Testcard Force Clean
 on:
   push:
     branches: [ main ]
@@ -13,18 +13,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Lấy toàn bộ lịch sử để xóa file triệt để
 
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Loop Testcard and Auto Clean
+      - name: Process and Force Clean
         run: |
-          # 1. Xóa toàn bộ file cũ từ lần chạy trước để làm mới hoàn toàn
-          rm -f test*.ts index.m3u8
+          # 1. Lệnh xóa "mạnh tay": Xóa sạch mọi file .ts và m3u8 cũ trong kho
+          git rm -f test*.ts index.m3u8 || true
           
-          # 2. Chạy FFmpeg với chế độ tự xóa segment cũ
-          # -hls_flags delete_segments: Tự xóa file .ts trên ổ cứng máy ảo khi nó rời khỏi playlist
-          # -hls_list_size 5: Chỉ giữ lại 5 file .ts mới nhất trong file index.m3u8
+          # 2. Chạy FFmpeg tạo luồng mới (5 phút)
+          # Mình để -hls_list_size 5 để file cực nhẹ
           ffmpeg -hide_banner -loglevel error \
           -stream_loop -1 \
           -i "testcard.mp4" \
@@ -34,16 +35,19 @@ jobs:
           -hls_segment_filename "test%d.ts" \
           -y index.m3u8
 
-      - name: Commit and Push (Dọn sạch kho)
+      - name: Commit and Force Push
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           
-          # 1. Thêm tất cả file hiện tại
+          # 3. Thêm tất cả những gì vừa tạo ra
           git add index.m3u8 test*.ts
           
-          # 2. Lệnh quan trọng: Tự động phát hiện và xóa các file đã bị FFmpeg xóa khỏi máy ảo
-          git add -u
-          
-          git commit --allow-empty -m "Auto Clean & Update Stream: $(date)"
-          git push
+          # 4. Kiểm tra xem có gì để commit không, tránh lỗi khi không có thay đổi
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "Force Refresh Stream: $(date)"
+            # Dùng push --force nếu cần để ghi đè hoàn toàn
+            git push origin main
+          else
+            echo "No changes to commit"
+          fi
