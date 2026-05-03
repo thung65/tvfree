@@ -1,9 +1,9 @@
-name: FFmpeg GitHub M3U8
+name: FFmpeg Export TS for Web
 on:
   push:
     branches: [ main ]
   schedule:
-    - cron: '0 */3 * * *' # Tự động chạy lại mỗi 3 tiếng
+    - cron: '0 */3 * * *'
 
 jobs:
   ffmpeg-process:
@@ -17,26 +17,33 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Force Generate M3U8
+      - name: Generate M3U8 and TS Files
         run: |
-          # Thêm -fflags +genpts để tự tạo mốc thời gian nếu luồng bị lỗi
-          # Thems -hls_flags independent_segments để TV dễ đọc hơn
+          # 1. Xóa các file cũ để tránh bị loạn
+          rm -f *.ts index.m3u8
+          
+          # 2. Chạy FFmpeg để xuất file .ts thực tế
+          # -hls_time 10: mỗi file .ts dài 10 giây
+          # -hls_list_size 6: file m3u8 sẽ giữ 6 đoạn phim gần nhất
+          # -hls_segment_filename: đặt tên cho các file .ts (index0.ts, index1.ts...)
           
           ffmpeg -hide_banner -loglevel error \
           -protocol_whitelist file,http,https,tcp,tls \
           -headers "Referer: https://vietanhtv.id.vn/" \
           -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
           -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
-          -t 60 -c copy -absf aac_adtstoasc \
-          -fflags +genpts \
-          -f hls -hls_time 10 -hls_list_size 6 -hls_flags delete_segments+independent_segments \
+          -t 120 -c copy -absf aac_adtstoasc \
+          -f hls -hls_time 10 -hls_list_size 6 \
+          -hls_segment_filename "data%d.ts" \
           -y index.m3u8
+          
+          sleep 5
 
-      - name: Commit and Push to Public
+      - name: Commit and Push All Files
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add index.m3u8
-          # Đẩy file lên để TV có link raw để đọc
-          git commit --allow-empty -m "Update M3U8: $(date)"
+          # Quan trọng: Thêm cả file index.m3u8 và tất cả file .ts vừa tạo
+          git add index.m3u8 data*.ts
+          git commit --allow-empty -m "Update M3U8 and TS segments: $(date)"
           git push
