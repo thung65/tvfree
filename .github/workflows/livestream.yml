@@ -1,41 +1,37 @@
-name: FFmpeg Stream Reset 3h
+name: FFmpeg Fix Mixed Content
 on:
   push:
     branches: [ main ]
   schedule:
-    # Cài đặt tự động chạy lại mỗi 3 tiếng (0, 3, 6, 9, 12, 15, 18, 21 giờ)
-    - cron: '0 */3 * * *'
+    - cron: '0 */3 * * *' # Tự động làm mới mỗi 3 tiếng
 
 jobs:
   ffmpeg-process:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Cực kỳ quan trọng để ghi file công khai
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Install FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Convert and Generate M3U8
+      - name: Convert HTTP to HTTPS Stream
         run: |
-          # FFmpeg sẽ lấy luồng từ link Việt Anh và xử lý
-          # Mình để -t 120 (chạy 2 phút) để tạo file index ổn định rồi lưu
+          # Dùng -protocol_whitelist để cho phép FFmpeg đọc cả http và https cùng lúc
           ffmpeg -hide_banner -loglevel error \
+          -protocol_whitelist file,http,https,tcp,tls \
           -headers "Referer: https://vietanhtv.id.vn/" \
           -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
-          -t 120 -c copy -f hls -hls_time 10 -hls_list_size 6 index.m3u8
+          -t 60 -c copy -f hls -hls_time 10 -hls_list_size 6 -y index.m3u8
           
           sleep 5
 
-      - name: Commit and Push to Public
+      - name: Commit and Push
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add index.m3u8
-          # Nếu không có thay đổi gì thì không báo lỗi (|| exit 0)
-          git commit -m "Cập nhật luồng video mới - Reset mỗi 3h" || exit 0
+          git commit --allow-empty -m "Fix Mixed Content & Reset 3h - $(date)"
           git push
