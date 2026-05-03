@@ -17,19 +17,19 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Create Clean M3U8
+      - name: Force Generate M3U8
         run: |
-          # Dùng FFmpeg lấy luồng và xử lý lỗi Mixed Content (http/https)
-          # -t 300: Cho FFmpeg chạy 5 phút để tạo ra một lượng segment (.ts) đủ lớn
-          # Điều này giúp link ổn định hơn khi nạp vào TV
+          # Thêm -fflags +genpts để tự tạo mốc thời gian nếu luồng bị lỗi
+          # Thems -hls_flags independent_segments để TV dễ đọc hơn
           
           ffmpeg -hide_banner -loglevel error \
           -protocol_whitelist file,http,https,tcp,tls \
           -headers "Referer: https://vietanhtv.id.vn/" \
-          -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+          -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
           -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
-          -t 300 -c copy -absf aac_adtstoasc \
-          -hls_time 10 -hls_list_size 10 -hls_flags delete_segments \
+          -t 60 -c copy -absf aac_adtstoasc \
+          -fflags +genpts \
+          -f hls -hls_time 10 -hls_list_size 6 -hls_flags delete_segments+independent_segments \
           -y index.m3u8
 
       - name: Commit and Push to Public
