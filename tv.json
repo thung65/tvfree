@@ -1,0 +1,21 @@
+{
+  "name": "Danh Sách Truyền Hình GitHub",
+  "parameter": "menu:list",
+  "items": [
+    { "label": "Tất cả kênh", "icon": "https://vnepg.site/logos/1.png", "action": "list:FIXED_CHANNELS" },
+    { "label": "Nhóm VTV", "action": "list:GROUP_VTV" },
+    { "label": "Nhóm Quốc Tế", "action": "list:GROUP_INTERNATIONAL" }
+  ],
+  "lists": {
+    "FIXED_CHANNELS": [
+      {"label": "VTV1", "image": "https://vnepg.site/logos/1.png", "action": "video:https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist_b4200000.m3u8"},
+      {"label": "VTV3", "image": "https://vnepg.site/logos/3.png", "action": "video:https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist_b4200000.m3u8"}
+    ],
+    "GROUP_VTV": [
+      {"label": "VTV1", "image": "https://vnepg.site/logos/1.png", "action": "video:https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist_b4200000.m3u8"}
+    ],
+    "GROUP_INTERNATIONAL": [
+      {"label": "NHK WORLD", "image": "https://vnepg.site/logos/161.png", "action": "video:https://live.fptplay53.net/fnxhd2/nhkworld_vhls.smil/chunklist.m3u8"}
+    ]
+  }
+}
