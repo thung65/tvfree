@@ -1,4 +1,4 @@
-name: FFmpeg Loop Testcard Force Clean
+name: Stream Twitch and Save Web
 on:
   push:
     branches: [ main ]
@@ -6,48 +6,37 @@ on:
     - cron: '0 */3 * * *'
 
 jobs:
-  build:
+  stream-process:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # Lấy toàn bộ lịch sử để xóa file triệt để
 
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Process and Force Clean
+      - name: Dual Stream (Twitch + Web Files)
         run: |
-          # 1. Lệnh xóa "mạnh tay": Xóa sạch mọi file .ts và m3u8 cũ trong kho
-          git rm -f test*.ts index.m3u8 || true
+          # Xóa các file cũ trước khi bắt đầu
+          rm -f seg*.ts index.m3u8
           
-          # 2. Chạy FFmpeg tạo luồng mới (5 phút)
-          # Mình để -hls_list_size 5 để file cực nhẹ
-          ffmpeg -hide_banner -loglevel error \
-          -stream_loop -1 \
-          -i "testcard.mp4" \
-          -t 300 -c:v libx264 -c:a aac -b:a 128k -pix_fmt yuv420p \
-          -f hls -hls_time 10 -hls_list_size 5 \
-          -hls_flags delete_segments \
-          -hls_segment_filename "test%d.ts" \
-          -y index.m3u8
+          # FFmpeg nhận đầu vào 1 lần nhưng xuất ra 2 nơi (Twitch và File tĩnh)
+          ffmpeg -re -hide_banner \
+          -protocol_whitelist file,http,https,tcp,tls \
+          -headers "Referer: https://vietanhtv.id.vn/" \
+          -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
+          -t 300 \
+          -map 0:v -map 0:a -c:v libx264 -preset veryfast -b:v 2500k -pix_fmt yuv420p \
+          -map 0:v -map 0:a -c:a aac -b:a 128k \
+          -f tee "[f=flv]rtmp://live.twitch.tv/app/${{ secrets.TWITCH_STREAM_KEY }}|[f=hls:hls_time=10:hls_list_size=10:hls_flags=delete_segments:hls_segment_filename=seg-%03d.ts]index.m3u8"
 
-      - name: Commit and Force Push
+      - name: Push to GitHub (For Web)
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          
-          # 3. Thêm tất cả những gì vừa tạo ra
-          git add index.m3u8 test*.ts
-          
-          # 4. Kiểm tra xem có gì để commit không, tránh lỗi khi không có thay đổi
-          if [ -n "$(git status --porcelain)" ]; then
-            git commit -m "Force Refresh Stream: $(date)"
-            # Dùng push --force nếu cần để ghi đè hoàn toàn
-            git push origin main
-          else
-            echo "No changes to commit"
-          fi
+          git add index.m3u8 seg*.ts
+          git add -u
+          git commit --allow-empty -m "Update Stream and Cleanup: $(date)"
+          git push
