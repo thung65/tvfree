@@ -1,4 +1,4 @@
-name: FFmpeg Export TS for Web
+name: FFmpeg Loop Testcard Clean
 on:
   push:
     branches: [ main ]
@@ -6,7 +6,7 @@ on:
     - cron: '0 */3 * * *'
 
 jobs:
-  ffmpeg-process:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -17,33 +17,33 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Generate M3U8 and TS Files
+      - name: Loop Testcard and Auto Clean
         run: |
-          # 1. Xóa các file cũ để tránh bị loạn
-          rm -f *.ts index.m3u8
+          # 1. Xóa toàn bộ file cũ từ lần chạy trước để làm mới hoàn toàn
+          rm -f test*.ts index.m3u8
           
-          # 2. Chạy FFmpeg để xuất file .ts thực tế
-          # -hls_time 10: mỗi file .ts dài 10 giây
-          # -hls_list_size 6: file m3u8 sẽ giữ 6 đoạn phim gần nhất
-          # -hls_segment_filename: đặt tên cho các file .ts (index0.ts, index1.ts...)
-          
+          # 2. Chạy FFmpeg với chế độ tự xóa segment cũ
+          # -hls_flags delete_segments: Tự xóa file .ts trên ổ cứng máy ảo khi nó rời khỏi playlist
+          # -hls_list_size 5: Chỉ giữ lại 5 file .ts mới nhất trong file index.m3u8
           ffmpeg -hide_banner -loglevel error \
-          -protocol_whitelist file,http,https,tcp,tls \
-          -headers "Referer: https://vietanhtv.id.vn/" \
-          -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
-          -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
-          -t 120 -c copy -absf aac_adtstoasc \
-          -f hls -hls_time 10 -hls_list_size 6 \
-          -hls_segment_filename "data%d.ts" \
+          -stream_loop -1 \
+          -i "testcard.mp4" \
+          -t 300 -c:v libx264 -c:a aac -b:a 128k -pix_fmt yuv420p \
+          -f hls -hls_time 10 -hls_list_size 5 \
+          -hls_flags delete_segments \
+          -hls_segment_filename "test%d.ts" \
           -y index.m3u8
-          
-          sleep 5
 
-      - name: Commit and Push All Files
+      - name: Commit and Push (Dọn sạch kho)
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          # Quan trọng: Thêm cả file index.m3u8 và tất cả file .ts vừa tạo
-          git add index.m3u8 data*.ts
-          git commit --allow-empty -m "Update M3U8 and TS segments: $(date)"
+          
+          # 1. Thêm tất cả file hiện tại
+          git add index.m3u8 test*.ts
+          
+          # 2. Lệnh quan trọng: Tự động phát hiện và xóa các file đã bị FFmpeg xóa khỏi máy ảo
+          git add -u
+          
+          git commit --allow-empty -m "Auto Clean & Update Stream: $(date)"
           git push
