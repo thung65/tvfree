@@ -20,6 +20,6 @@ jobs:
           timeout 2h55m bash -c 'while true; do
             ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
-            -c copy -f flv "rtmp://live.twitch.tv/app/$KHOI_KEY"
+            -c copy -f flv "rtmp://live.twitch.tv/app/TWITCH_STREAM_KEY"
             sleep 10
           done'
