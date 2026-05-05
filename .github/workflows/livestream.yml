@@ -1,59 +1,31 @@
-name: Stream_Pro_TV_Style
+name: "Livestream IPTV TV360 - By Khoi"
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # Tự động chạy lại mỗi 3 tiếng
-  workflow_dispatch: # Cho phép bấm chạy thủ công
+    # Cứ 5 tiếng rưỡi nổ máy lại một lần (24/7)
+    - cron: '30 */5 * * *'
+  workflow_dispatch: 
 
 jobs:
-  run-stream:
+  stream:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # Quyền cực kỳ quan trọng để đẩy file lên GitHub
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Install FFmpeg
         run: sudo apt update && sudo apt install ffmpeg -y
 
-      - name: Live and Web Update
+      - name: Start Streaming
         env:
+          # Link TV360 của Khôi
+          INPUT_URL: "https://vietanhtv.id.vn/tv360/32/index.m3u8"
+          # Khóa luồng Twitch của Khôi (Lấy trong Settings của Twitch)
           TWITCH_KEY: ${{ secrets.TWITCH_KEY }}
         run: |
-          # 1. Cấu hình Git ngay từ đầu
-          git config --global user.name "Trần Tất Khôi"
-          git config --global user.email "action@github.com"
-          git config --global pull.rebase true
-          
-          # 2. Xóa sạch file cũ để khởi động luồng mới
-          rm -f seg*.ts index.m3u8
-          
-          SOURCE_URL="https://vietanhtv.id.vn/tv360/32/index.m3u8"
-          
-          # 3. Chạy FFmpeg ngầm (&)
-          ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
-          -headers "Referer: https://vietanhtv.id.vn/" \
-          -i "$SOURCE_URL" \
-          -t 10500 \
-          -c:v libx264 -preset veryfast -b:v 1500k -pix_fmt yuv420p -g 50 \
-          -c:a aac -b:a 128k -ar 44100 \
-          -f tee "[f=flv]rtmp://live.twitch.tv/app/$TWITCH_KEY|[f=hls:hls_time=10:hls_list_size=10:hls_flags=delete_segments:hls_segment_filename=seg-%03d.ts]index.m3u8" &
-          
-          # 4. Vòng lặp cập nhật file (Cứ mỗi 3 phút đẩy lên 1 lần cho chắc)
-          for i in {1..20}
-          do
-            sleep 180
-            # Kiểm tra xem file m3u8 đã được tạo chưa mới đẩy
-            if [ -f "index.m3u8" ]; then
-              git add index.m3u8 seg*.ts
-              git add -u
-              # Chỉ commit nếu có thay đổi thực sự
-              if ! git diff-index --quiet HEAD --; then
-                git commit -m "Live Update: $(date)"
-                # Pull về trước khi Push để tránh lỗi xung đột
-                git pull origin main
-                git push origin main
-              fi
-            fi
-          done
+          # Chạy trong 5 tiếng 45 phút rồi nghỉ để máy mới thay thế
+          timeout 5h45m bash -c 'while true; do
+            ffmpeg -re -connect_delay 10 -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+            -i "$INPUT_URL" \
+            -c copy -f flv "rtmp://live.twitch.tv/app/$TWITCH_KEY"
+            
+            echo "Nguồn bị ngắt hoặc lag, đang thử lại sau 5 giây..."
+            sleep 5
+          done'
