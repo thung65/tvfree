@@ -1,18 +1,25 @@
-name: Live3h
+name: Live_3h_Chuan
 on:
   push:
   workflow_dispatch:
   schedule:
     - cron: '0 */3 * * *'
+
 jobs:
   live:
     runs-on: ubuntu-latest
     steps:
-      - name: Install
+      - name: Cai_Dat
         run: sudo apt update && sudo apt install ffmpeg -y
-      - name: Run
+
+      - name: Chay_Live
+        env:
+          # Phải viết đúng y hệt tên Khôi đặt trong Secrets
+          KHOI_KEY: ${{ secrets.TWITCH_STREAM_KEY }}
         run: |
           timeout 2h55m bash -c 'while true; do
-            ffmpeg -re -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" -c copy -f flv "rtmp://live.twitch.tv/app/live_1436661130_ZlbRQTC3GRCviGsoMV9QV1nh14CkoY"
+            ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+            -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
+            -c copy -f flv "rtmp://live.twitch.tv/app/$KHOI_KEY"
             sleep 10
           done'
