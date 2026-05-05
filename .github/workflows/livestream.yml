@@ -1,10 +1,11 @@
-name: "Livestream IPTV TV360 - By Khoi"
+name: "Livestream IPTV Chạy Ngay - By Khoi"
 
 on:
+  push:
+    branches: [ main ] # Cứ hễ Khôi nhấn "Commit" hoặc sửa code là nó chạy luôn
   schedule:
-    # Cứ 5 tiếng rưỡi nổ máy lại một lần (24/7)
-    - cron: '30 */5 * * *'
-  workflow_dispatch: 
+    - cron: '0 */5 * * *' # Vẫn giữ hẹn giờ để nó tự chạy lại sau mỗi 5 tiếng
+  workflow_dispatch: # Tạo cái nút "Run workflow" để Khôi bấm chạy thủ công bất cứ lúc nào
 
 jobs:
   stream:
@@ -13,19 +14,15 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt update && sudo apt install ffmpeg -y
 
-      - name: Start Streaming
+      - name: Start Streaming Now
         env:
-          # Link TV360 của Khôi
           INPUT_URL: "https://vietanhtv.id.vn/tv360/32/index.m3u8"
-          # Khóa luồng Twitch của Khôi (Lấy trong Settings của Twitch)
           TWITCH_KEY: ${{ secrets.TWITCH_KEY }}
         run: |
-          # Chạy trong 5 tiếng 45 phút rồi nghỉ để máy mới thay thế
-          timeout 5h45m bash -c 'while true; do
-            ffmpeg -re -connect_delay 10 -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
-            -i "$INPUT_URL" \
+          # Dùng vòng lặp để giữ luồng luôn sống trong 5 tiếng rưỡi
+          timeout 5h30m bash -c 'while true; do
+            ffmpeg -re -i "$INPUT_URL" \
             -c copy -f flv "rtmp://live.twitch.tv/app/$TWITCH_KEY"
-            
-            echo "Nguồn bị ngắt hoặc lag, đang thử lại sau 5 giây..."
+            echo "Đang khởi động lại luồng sau 5 giây..."
             sleep 5
           done'
