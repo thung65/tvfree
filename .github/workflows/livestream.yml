@@ -1,34 +1,17 @@
-name: "LIVESTREAM TV360 BY KHOI"
+name: Live_Fix_Khoi
 
 on:
   push:
-    branches: [ main ] # Cứ nhấn Lưu (Commit) là chạy ngay
-  schedule:
-    - cron: '0 */5 * * *' # Tự động chạy lại sau mỗi 5 tiếng
-  workflow_dispatch: # Tạo nút bấm "Run workflow" để Khôi bấm là chạy luôn
+  workflow_dispatch:
 
 jobs:
-  streaming_job:
+  streaming:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup FFmpeg
+      - name: Cai_Dat_Dong_Co
         run: sudo apt update && sudo apt install ffmpeg -y
 
-      - name: Bat dau Livestream
-        env:
-          # Mã Stream Key Khôi gửi lúc nãy (Nên cho vào Secret để an toàn hơn)
-          TWITCH_KEY: "live_1436661130_ZlbRQTC3GRCviGsoMV9QV1nh14CkoY"
-          URL_NGUON: "https://vietanhtv.id.vn/tv360/32/index.m3u8"
+      - name: Chay_Truc_Tiep
         run: |
-          # Vòng lặp này giúp GitHub chạy liên tục trong 5 giờ 30 phút
-          timeout 5h30m bash -c 'while true; do
-            echo "--- DỰ ÁN CỦA KHÔI ĐANG LÊN SÓNG ---"
-            
-            # Thêm các lệnh reconnect để GitHub không bị dừng khi mạng lag
-            ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
-            -i "$URL_NGUON" \
-            -c copy -f flv "rtmp://live.twitch.tv/app/$TWITCH_KEY"
-            
-            echo "Link gặp sự cố, đang kết nối lại sau 5 giây..."
-            sleep 5
-          done'
+          ffmpeg -re -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
+          -c copy -f flv "rtmp://live.twitch.tv/app/live_1436661130_ZlbRQTC3GRCviGsoMV9QV1nh14CkoY"
