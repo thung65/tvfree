@@ -1,32 +1,31 @@
-name: FFmpeg_Twitch_3h
+name: "Livestream IPTV Chay Ngay - By Khoi"
 
 on:
   push:
     branches: [ main ]
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '0 */3 * * *' # Khôi nên để 3 tiếng để tránh bị GitHub soi quá kỹ
   workflow_dispatch:
 
 jobs:
   stream:
     runs-on: ubuntu-latest
     steps:
-      - name: Install_FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+      - name: Install FFmpeg
+        run: sudo apt update && sudo apt install ffmpeg -y
 
-      - name: Run_Live
+      - name: Start Streaming Now
         env:
-          # Gọi đúng cái tên trong ảnh Secrets của Khôi
-          KHOI_SECRET: ${{ secrets.TWITCH_STREAM_KEY }}
+          INPUT_URL: "https://vietanhtv.id.vn/tv360/32/index.m3u8"
+          # Nhớ phải có dấu cách sau dấu { và trước dấu } như thế này:
+          TWITCH_KEY: ${{ secrets.TWITCH_STREAM_KEY }}
         run: |
-          # Chạy trong 2 tiếng 50 phút rồi nghỉ để bản sau vào thay
-          timeout 2h50m bash -c 'while true; do
-            ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
+          # Chỉnh lại timeout 2h55m để khớp với cron 3 tiếng (Tránh bị trùng luồng)
+          timeout 2h55m bash -c 'while true; do
+            ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -headers "Referer: https://vietanhtv.id.vn/" \
-            -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
-            -c copy -f flv "rtmp://live.twitch.tv/app/$KHOI_SECRET"
-            echo "Lag mạng, đang kết nối lại sau 10 giây..."
+            -i "$INPUT_URL" \
+            -c copy -f flv "rtmp://live.twitch.tv/app/$TWITCH_KEY"
+            echo "Đang khởi động lại luồng sau 10 giây..."
             sleep 10
           done'
