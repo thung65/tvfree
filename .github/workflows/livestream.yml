@@ -1,34 +1,29 @@
-name: "Live_IPTV_Fast_By_Khoi"
+name: "Live_IPTV_Sieu_Toc_Khoi"
 
 on:
   push:
     branches: [ main ]
   schedule:
-    - cron: '0 */3 * * *' # Reset mỗi 3 tiếng để máy luôn khỏe
+    - cron: '0 */3 * * *'
   workflow_dispatch:
 
 jobs:
   stream:
     runs-on: ubuntu-latest
     steps:
-      # Bước này thường có sẵn FFmpeg trong Ubuntu-latest nên sẽ chạy rất nhanh
-      - name: Setup FFmpeg
-        run: |
-          if ! command -v ffmpeg &> /dev/null; then
-            sudo apt-get update -qq
-            sudo apt-get install -y ffmpeg
-          fi
-
-      - name: Start Now
+      - name: Chay_Luon
         env:
           INPUT_URL: "https://vietanhtv.id.vn/tv360/32/index.m3u8"
           TWITCH_KEY: ${{ secrets.TWITCH_STREAM_KEY }}
         run: |
-          # Chạy trong 2 giờ 50 phút để bản sau tự nối tiếp
+          # Kiểm tra xem ffmpeg có sẵn không và chạy luôn
+          ffmpeg -version
+          
           timeout 2h50m bash -c 'while true; do
-            ffmpeg -re -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+            ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -headers "Referer: https://vietanhtv.id.vn/" \
             -i "$INPUT_URL" \
             -c copy -f flv "rtmp://live.twitch.tv/app/$TWITCH_KEY"
+            echo "Dang ket noi lai sau 10 giay..."
             sleep 10
           done'
