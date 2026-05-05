@@ -1,22 +1,32 @@
-name: Live_3h_Secret
+name: FFmpeg_Twitch_3h
+
 on:
   push:
-  workflow_dispatch:
+    branches: [ main ]
   schedule:
     - cron: '0 */3 * * *'
+  workflow_dispatch:
 
 jobs:
-  live:
+  stream:
     runs-on: ubuntu-latest
     steps:
-      - name: Install
-        run: sudo apt update && sudo apt install ffmpeg -y
-
-      - name: Run
+      - name: Install_FFmpeg
         run: |
-          timeout 2h55m bash -c 'while true; do
-            ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Run_Live
+        env:
+          # Gọi đúng cái tên trong ảnh Secrets của Khôi
+          KHOI_SECRET: ${{ secrets.TWITCH_STREAM_KEY }}
+        run: |
+          # Chạy trong 2 tiếng 50 phút rồi nghỉ để bản sau vào thay
+          timeout 2h50m bash -c 'while true; do
+            ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
+            -headers "Referer: https://vietanhtv.id.vn/" \
             -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
-            -c copy -f flv "rtmp://live.twitch.tv/app/${{ secrets.TWITCH_STREAM_KEY }}"
+            -c copy -f flv "rtmp://live.twitch.tv/app/$KHOI_SECRET"
+            echo "Lag mạng, đang kết nối lại sau 10 giây..."
             sleep 10
           done'
