@@ -2,8 +2,10 @@ name: Stream_IPTV_247
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # Tự động khởi động lại mỗi 3 tiếng
+    - cron: '0 */3 * * *'
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   run-stream:
@@ -14,21 +16,22 @@ jobs:
 
       - name: Live
         env:
-          TWITCH_KEY: ${{ secrets.TWITCH_KEY }}
+          # Sửa lại đúng tên Secret mà Khôi đặt
+          KHOI_KEY: ${{ secrets.TWITCH_STREAM_KEY }}
         run: |
-          # Link nguồn TV360 hoặc MPD của bạn
           SOURCE_URL="https://vietanhtv.id.vn/tv360/32/index.m3u8"
           
-          # Vòng lặp tự khởi động lại nếu bị ngắt giữa chừng
-          while true; do
-            echo "Đang đẩy luồng lên Twitch..."
+          # Giữ nguyên vòng lặp while của Khôi nhưng thêm timeout để không lỗi
+          timeout 2h55m bash -c "while true; do
+            echo 'Đang đẩy luồng lên Twitch...'
             
             ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
-            -i "$SOURCE_URL" \
+            -headers 'Referer: https://vietanhtv.id.vn/' \
+            -i '$SOURCE_URL' \
             -c:v libx264 -preset veryfast -b:v 2500k -pix_fmt yuv420p -g 50 \
             -c:a aac -b:a 128k -ar 44100 -f flv \
-            "rtmp://live.twitch.tv/app/$TWITCH_KEY"
+            'rtmp://live.twitch.tv/app/$KHOI_KEY'
             
-            echo "Luồng tạm dừng. Chờ 5 giây để phát lại..."
-            sleep 5
-          done
+            echo 'Luồng tạm dừng. Chờ 10 giây để phát lại...'
+            sleep 10
+          done"
