@@ -1,17 +1,27 @@
-name: Live_Fix_Khoi
+name: "Auto_Restart_Livestream_3h"
 
 on:
   push:
+    branches: [ main ]
   workflow_dispatch:
+  schedule:
+    # Cứ đúng 3 tiếng (vào phút thứ 0) là nó tự nổ máy lại
+    - cron: '0 */3 * * *'
 
 jobs:
   streaming:
     runs-on: ubuntu-latest
     steps:
-      - name: Cai_Dat_Dong_Co
+      - name: Cai_Dat_FFmpeg
         run: sudo apt update && sudo apt install ffmpeg -y
 
-      - name: Chay_Truc_Tiep
+      - name: Chay_Livestream
         run: |
-          ffmpeg -re -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
-          -c copy -f flv "rtmp://live.twitch.tv/app/live_1436661130_ZlbRQTC3GRCviGsoMV9QV1nh14CkoY"
+          # Dùng timeout để buộc nó dừng sau 2 giờ 55 phút 
+          # (để 5 phút sau cron mới kích hoạt bản mới cho mượt)
+          timeout 2h55m bash -c 'while true; do
+            ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+            -i "https://vietanhtv.id.vn/tv360/32/index.m3u8" \
+            -c copy -f flv "rtmp://live.twitch.tv/app/live_1436661130_ZlbRQTC3GRCviGsoMV9QV1nh14CkoY"
+            sleep 5
+          done'
