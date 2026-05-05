@@ -11,25 +11,22 @@ jobs:
   run-stream:
     runs-on: ubuntu-latest
     steps:
-      - name: Install FFmpeg
-        run: sudo apt update && sudo apt install ffmpeg -y
-
-      - name: Live
+      # Bỏ bước cài đặt FFmpeg vì GitHub đã có sẵn bản 4.x hoặc 5.x cực ngon rồi
+      - name: Live Now
         env:
-          # Đã khớp với tên Secret mới của Khôi
           MY_KEY: ${{ secrets.TWITCH_KEY }}
         run: |
           SOURCE="https://vietanhtv.id.vn/tv360/32/index.m3u8"
           
-          # Chạy vòng lặp để giữ luồng sống liên tục trong gần 3 tiếng
+          # Chạy luôn, không đợi chờ gì cả
           timeout 2h55m bash -c "while true; do
             ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
             -headers 'Referer: https://vietanhtv.id.vn/' \
             -i '$SOURCE' \
-            -c:v libx264 -preset veryfast -b:v 3000k -pix_fmt yuv420p -g 50 \
+            -c:v libx264 -preset veryfast -b:v 2500k -pix_fmt yuv420p -g 50 \
             -c:a aac -b:a 128k -f flv \
             \"rtmp://live.twitch.tv/app/$MY_KEY\"
             
-            echo 'Mat ket noi, dang thu lai sau 10 giay...'
-            sleep 10
+            echo 'Mất kết nối, đang thử lại sau 5 giây...'
+            sleep 5
           done"
