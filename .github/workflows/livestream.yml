@@ -2,7 +2,8 @@ name: Stream_Pro_TV_Style
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # Tự động chạy lại mỗi 3 tiếng để tránh giới hạn 6 tiếng của GitHub
+    # Tự động chạy lại mỗi 3 tiếng để tránh giới hạn 6 tiếng của GitHub
+    - cron: '0 */3 * * *' 
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -20,7 +21,7 @@ jobs:
           sudo apt-get install -y ffmpeg
 
       - name: Live Now
-        # Khai báo env ở đây để GitHub nạp Secret an toàn vào bộ nhớ máy ảo trước
+        # Nạp Secret TWITCH_KEY vào biến môi trường STREAM_KEY một cách an toàn
         env:
           STREAM_KEY: ${{ secrets.TWITCH_KEY }}
         run: |
@@ -32,7 +33,7 @@ jobs:
           while [ $SECONDS -lt $end ]; do
             echo "========== Khởi động luồng phát FFmpeg mới =========="
             
-            # Gọi biến môi trường bằng cú pháp Bash chuẩn: $STREAM_KEY
+            # Đã chuyển sang rtmp://hkg.live.twitch.tv để sửa lỗi chặn kết nối và giảm giật lag
             ffmpeg -re \
               -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
               -reconnect_delay_max 10 -rw_timeout 15000000 \
@@ -40,7 +41,7 @@ jobs:
               -i "$SOURCE" \
               -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
-              -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://live.twitch.tv/app/$STREAM_KEY"
+              -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://hkg.live.twitch.tv/app/$STREAM_KEY"
             
             echo "Mất kết nối với server gốc hoặc Twitch. Đang chuẩn bị thử lại sau 5 giây..."
             sleep 5
