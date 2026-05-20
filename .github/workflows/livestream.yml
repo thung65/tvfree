@@ -20,19 +20,16 @@ jobs:
           sudo apt-get install -y ffmpeg
 
       - name: Live Now
-        env:
-          K: ${{ secrets.TWITCH_KEY }}
         run: |
           SOURCE="https://sgclient.duckdns.org/source/tv360.m3u8?id=32"
           
           # Đặt tổng thời gian chạy cho toàn bộ bước này là 2 tiếng 50 phút
-          # Thiết kế vòng lặp BÊN NGOÀI timeout để nếu FFmpeg sập, hệ thống sẽ tự động khởi động lại ngay lập tức
-          
           end=$((SECONDS + 10200)) # 2h50m = 10200 giây
           
           while [ $SECONDS -lt $end ]; do
             echo "========== Khởi động luồng phát FFmpeg mới =========="
             
+            # ĐÃ THÊM THẲNG BIẾN SECRETS VÀO CUỐI ĐƯỜNG DẪN RTMP Ở ĐÂY
             ffmpeg -re \
               -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
               -reconnect_delay_max 10 -rw_timeout 15000000 \
@@ -40,7 +37,7 @@ jobs:
               -i "$SOURCE" \
               -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
-              -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://live.twitch.tv/app/$K"
+              -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://live.twitch.tv/app/${{ secrets.TWITCH_KEY }}"
             
             echo "Mất kết nối với server gốc hoặc Twitch. Đang chuẩn bị thử lại sau 5 giây..."
             sleep 5
