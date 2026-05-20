@@ -1,8 +1,8 @@
-name: Stream_Pro_TV_Style
+name: Stream_Kenh_32
 
 on:
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '0 */3 * * *' # Tự động chạy lại mỗi 3 tiếng vào phút thứ 00
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -21,12 +21,11 @@ jobs:
         run: |
           SOURCE="https://sgclient.duckdns.org/source/tv360.m3u8?id=32"
           
-          end=$((SECONDS + 10200)) # Chạy liên tục trong 2 tiếng 50 phút
+          echo "========== ĐANG PHÁT LUỒNG RIÊNG BIỆT KÊNH ID: 32 =========="
+          
+          end=$((SECONDS + 10200)) # Chạy trong 2 tiếng 50 phút
           
           while [ $SECONDS -lt $end ]; do
-            echo "========== Khởi động luồng phát giả lập OBS (Secrets Trực Tiếp) =========="
-            
-            # Đút thẳng biến mật khẩu GitHub Secrets vào đuôi link RTMP cũ của bạn
             ffmpeg -re \
               -fflags +genpts+discardcorrupt \
               -analyzeduration 1000000 -probesize 1000000 \
@@ -39,8 +38,6 @@ jobs:
               -c:a aac -b:a 128k -ar 44100 \
               -f flv -user_agent "FMLE/3.0 (compatible; FMSc/1.0) OBS/30.0.0" "rtmp://live.twitch.tv/app/${{ secrets.TWITCH_KEY }}"
             
-            echo "Luồng chập chờn hoặc bị ngắt kết nối. Đang tự động phát lại sau 5 giây..."
+            echo "Kênh 32 gặp sự cố kết nối. Tự động thử lại sau 5 giây..."
             sleep 5
           done
-          
-          echo "Hết chu kỳ chạy an toàn."
