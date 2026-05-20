@@ -14,10 +14,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg 1 Second (Using Native Snap)
-        # Cách nhanh nhất không dùng file ngoài: Gọi thẳng FFmpeg có sẵn qua Snap của Ubuntu
+      - name: Fix Error And Install FFmpeg Fast
+        # -y: Tự động đồng ý
+        # -qq: Chạy ẩn không in log ra màn hình để tăng tốc độ
+        # --no-install-recommends: Chỉ cài đúng bộ mã hóa, bỏ qua đống tài liệu phụ rườm rà
         run: |
-          sudo snap install ffmpeg --classic
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg
 
       - name: Live Now
         env:
@@ -31,16 +33,18 @@ jobs:
             echo "========== Khởi động luồng phát FFmpeg mới =========="
             
             ffmpeg -re \
+              -fflags +genpts+discardcorrupt \
+              -analyzeduration 1000000 -probesize 1000000 \
               -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
-              -reconnect_delay_max 10 -rw_timeout 15000000 \
+              -reconnect_delay_max 5 -rw_timeout 5000000 \
               -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
               -i "$SOURCE" \
               -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
               -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://live.twitch.tv/app/$K"
             
-            echo "Mất kết nối với server gốc hoặc Twitch. Đang chuẩn bị thử lại sau 5 giây..."
-            sleep 5
+            echo "Luồng nguồn không ổn định đã bị ngắt. Đang tự động kết nối lại sau 3 giây..."
+            sleep 3
           done
           
           echo "Đã hết thời gian chạy an toàn 2h50m. Đóng job để đợi chu kỳ cron tiếp theo kích hoạt."
