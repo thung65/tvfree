@@ -14,20 +14,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Fix Error And Install FFmpeg Fast
-        # -y: Tự động đồng ý
-        # -qq: Chạy ẩn không in log ra màn hình để tăng tốc độ
-        # --no-install-recommends: Chỉ cài đúng bộ mã hóa, bỏ qua đống tài liệu phụ rườm rà
-        run: |
-          sudo apt-get install -y -qq --no-install-recommends ffmpeg
+      - name: Install FFmpeg Standard
+        # Dùng lệnh tiêu chuẩn để cài đặt đầy đủ codec hình ảnh/âm thanh mà không cần update
+        run: sudo apt-get install -y ffmpeg
 
       - name: Live Now
         env:
-          K: ${{ secrets.TWITCH_KEY }}
+          TWITCH_STREAM_KEY: ${{ secrets.TWITCH_KEY }}
         run: |
           SOURCE="https://sgclient.duckdns.org/source/tv360.m3u8?id=32"
           
-          end=$((SECONDS + 10200)) # Chạy trong 2 tiếng 50 phút
+          # Kiểm tra an toàn xem bạn đã điền Key trong mục Settings chưa
+          if [ -z "$TWITCH_STREAM_KEY" ]; then
+            echo "LỖI: Bạn chưa thêm hoặc điền sai tên TWITCH_KEY trong mục Settings -> Secrets của GitHub!"
+            exit 1
+          fi
+          
+          end=$((SECONDS + 10200)) # Chạy liên tục trong 2 tiếng 50 phút
           
           while [ $SECONDS -lt $end ]; do
             echo "========== Khởi động luồng phát FFmpeg mới =========="
@@ -41,10 +44,10 @@ jobs:
               -i "$SOURCE" \
               -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
-              -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://live.twitch.tv/app/$K"
+              -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://live.twitch.tv/app/$TWITCH_STREAM_KEY"
             
-            echo "Luồng nguồn không ổn định đã bị ngắt. Đang tự động kết nối lại sau 3 giây..."
-            sleep 3
+            echo "Luồng phát bị ngắt hoặc server nguồn chập chờn. Đang tự động kết nối lại sau 5 giây..."
+            sleep 5
           done
           
-          echo "Đã hết thời gian chạy an toàn 2h50m. Đóng job để đợi chu kỳ cron tiếp theo kích hoạt."
+          echo "Đã hết thời gian chạy an toàn. Đóng job để đợi chu kỳ tiếp theo."
