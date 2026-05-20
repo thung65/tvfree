@@ -36,7 +36,7 @@ jobs:
               -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
               -c:a aac -b:a 128k -ar 44100 \
-              -f flv -user_agent "FMLE/3.0 (compatible; FMSc/1.0) OBS/30.0.0" "rtmp://live.twitch.tv/app/${{ secrets.TWITCH_KEY }}"
+              -f flv -user_agent "FMLE/3.0 (compatible; FMSc/1.0) OBS/30.0.0" "rtmp://live.twitch.tv/app/${{ secrets.TWITCH_KEY_2 }}"
             
             echo "Kênh 175 gặp sự cố kết nối. Tự động thử lại sau 5 giây..."
             sleep 5
