@@ -1,8 +1,8 @@
-name: Stream_Kenh_32
+name: Stream_Pro_TV_Style
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # Tự động chạy lại mỗi 3 tiếng vào phút thứ 00
+    - cron: '0 */3 * * *' # Tự động chạy lại mỗi 3 tiếng để tránh giới hạn 6 tiếng của GitHub
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -14,30 +14,36 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg Standard
-        run: sudo apt-get install -y ffmpeg
+      - name: Install FFmpeg Fast
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
 
       - name: Live Now
+        env:
+          K: ${{ secrets.TWITCH_KEY }}
         run: |
           SOURCE="https://sgclient.duckdns.org/source/tv360.m3u8?id=32"
           
-          echo "========== ĐANG PHÁT LUỒNG RIÊNG BIỆT KÊNH ID: 32 =========="
+          # Đặt tổng thời gian chạy cho toàn bộ bước này là 2 tiếng 50 phút
+          # Thiết kế vòng lặp BÊN NGOÀI timeout để nếu FFmpeg sập, hệ thống sẽ tự động khởi động lại ngay lập tức
           
-          end=$((SECONDS + 10200)) # Chạy trong 2 tiếng 50 phút
+          end=$((SECONDS + 10200)) # 2h50m = 10200 giây
           
           while [ $SECONDS -lt $end ]; do
+            echo "========== Khởi động luồng phát FFmpeg mới =========="
+            
             ffmpeg -re \
-              -fflags +genpts+discardcorrupt \
-              -analyzeduration 1000000 -probesize 1000000 \
               -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
-              -reconnect_delay_max 5 -rw_timeout 5000000 \
+              -reconnect_delay_max 10 -rw_timeout 15000000 \
               -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
               -i "$SOURCE" \
               -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
-              -c:a aac -b:a 128k -ar 44100 \
-              -f flv -user_agent "FMLE/3.0 (compatible; FMSc/1.0) OBS/30.0.0" "rtmp://live.twitch.tv/app/${{ secrets.TWITCH_KEY }}"
+              -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://live.twitch.tv/app/$K"
             
-            echo "Kênh 32 gặp sự cố kết nối. Tự động thử lại sau 5 giây..."
+            echo "Mất kết nối với server gốc hoặc Twitch. Đang chuẩn bị thử lại sau 5 giây..."
             sleep 5
           done
+          
+          echo "Đã hết thời gian chạy an toàn 2h50m. Đóng job để đợi chu kỳ cron tiếp theo kích hoạt."
