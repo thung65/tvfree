@@ -1,43 +1,43 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+name: Stream_Kenh_175
 
 on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
+  schedule:
+    - cron: '5 */3 * * *' # Tự động chạy lại mỗi 3 tiếng vào phút thứ 05 (tránh trùng giờ file 32)
   workflow_dispatch:
-
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  push:
+    branches: [ main ]
 
 jobs:
-  # Single deploy job since we're just deploying
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  run-stream:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Upload entire repository
-          path: '.'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+
+      - name: Install FFmpeg Standard
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Live Now
+        run: |
+          SOURCE="https://sgclient.duckdns.org/source/tv360.m3u8?id=175"
+          
+          echo "========== ĐANG PHÁT LUỒNG RIÊNG BIỆT KÊNH ID: 175 =========="
+          
+          end=$((SECONDS + 10200)) # Chạy trong 2 tiếng 50 phút
+          
+          while [ $SECONDS -lt $end ]; do
+            ffmpeg -re \
+              -fflags +genpts+discardcorrupt \
+              -analyzeduration 1000000 -probesize 1000000 \
+              -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
+              -reconnect_delay_max 5 -rw_timeout 5000000 \
+              -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
+              -i "$SOURCE" \
+              -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
+              -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
+              -c:a aac -b:a 128k -ar 44100 \
+              -f flv -user_agent "FMLE/3.0 (compatible; FMSc/1.0) OBS/30.0.0" "rtmp://live.twitch.tv/app/${{ secrets.TWITCH_KEY }}"
+            
+            echo "Kênh 175 gặp sự cố kết nối. Tự động thử lại sau 5 giây..."
+            sleep 5
+          done
