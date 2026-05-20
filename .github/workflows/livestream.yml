@@ -2,7 +2,7 @@ name: Stream_Pro_TV_Style
 
 on:
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '0 */3 * * *' # Tự động chạy lại mỗi 3 tiếng để tránh giới hạn 6 tiếng của GitHub
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -11,9 +11,13 @@ jobs:
   run-stream:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Install FFmpeg Fast
-        # Dùng lệnh này để cài thẳng, không đợi update rườm rà
-        run: sudo apt-get install -y ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
 
       - name: Live Now
         env:
@@ -21,13 +25,25 @@ jobs:
         run: |
           SOURCE="https://sgclient.duckdns.org/source/tv360.m3u8?id=32"
           
-          timeout 2h55m bash -c "while true; do
-            ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
-            -headers 'Referer: https://vietanhtv.id.vn/' \
-            -i '$SOURCE' \
-            -c:v libx264 -preset veryfast -b:v 2500k -pix_fmt yuv420p -g 50 \
-            -c:a aac -b:a 128k -f flv \"rtmp://live.twitch.tv/app/$K\"
+          # Đặt tổng thời gian chạy cho toàn bộ bước này là 2 tiếng 50 phút
+          # Thiết kế vòng lặp BÊN NGOÀI timeout để nếu FFmpeg sập, hệ thống sẽ tự động khởi động lại ngay lập tức
+          
+          end=$((SECONDS + 10200)) # 2h50m = 10200 giây
+          
+          while [ $SECONDS -lt $end ]; do
+            echo "========== Khởi động luồng phát FFmpeg mới =========="
             
-            echo 'Mat ket noi, dang thu lai sau 10 giay...'
-            sleep 10
-          done"
+            ffmpeg -re \
+              -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
+              -reconnect_delay_max 10 -rw_timeout 15000000 \
+              -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
+              -i "$SOURCE" \
+              -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
+              -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
+              -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://live.twitch.tv/app/$K"
+            
+            echo "Mất kết nối với server gốc hoặc Twitch. Đang chuẩn bị thử lại sau 5 giây..."
+            sleep 5
+          done
+          
+          echo "Đã hết thời gian chạy an toàn 2h50m. Đóng job để đợi chu kỳ cron tiếp theo kích hoạt."
