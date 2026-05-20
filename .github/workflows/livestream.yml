@@ -2,7 +2,7 @@ name: Stream_Pro_TV_Style
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # Tự động chạy lại mỗi 3 tiếng để tránh giới hạn của GitHub
+    - cron: '0 */3 * * *'
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -14,12 +14,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg Super Fast (Static Binary)
-        # Tải trực tiếp file chạy sẵn từ kho lưu trữ release, giải nén và ném thẳng vào hệ thống
+      - name: Install FFmpeg 1 Second (Using Native Snap)
+        # Cách nhanh nhất không dùng file ngoài: Gọi thẳng FFmpeg có sẵn qua Snap của Ubuntu
         run: |
-          mkdir -p $HOME/ffmpeg
-          curl -L https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz | tar -xJ --strip-components=1 -C $HOME/ffmpeg
-          echo "$HOME/ffmpeg/bin" >> $GITHUB_PATH
+          sudo snap install ffmpeg --classic
 
       - name: Live Now
         env:
