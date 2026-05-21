@@ -1,43 +1,69 @@
-name: Stream_Kenh_175
+name: Livestream_Matrix_Super_Light
 
 on:
   schedule:
-    - cron: '5 */3 * * *' # Tự động chạy lại mỗi 3 tiếng vào phút thứ 05 (tránh trùng giờ file 32)
-  workflow_dispatch:
-  push:
-    branches: [ main ]
+    # Cứ mỗi 3 tiếng hệ thống tự khởi động lại để dọn dẹp cache và né giới hạn GitHub
+    - cron: '0 */3 * * *'
+  workflow_dispatch: # Nút bấm để bạn tự kích hoạt bằng tay
 
 jobs:
   run-stream:
     runs-on: ubuntu-latest
+    
+    # 🌟 MA TRẬN TỰ ĐỘNG: Chia việc cho 3 máy ảo gánh 3 dòng key riêng biệt
+    strategy:
+      matrix:
+        include:
+          - id: 1
+            name: "Kenh_TV360_Id32"
+            source_url: "https://sgclient.duckdns.org/source/tv360.m3u8?id=32"
+            twitch_secret: "TWITCH_KEY"       # Khớp với TWITCH_KEY của bạn
+          
+          - id: 2
+            name: "Kenh_VieON_DongNai3"
+            source_url: "https://sgclient.duckdns.org/source/vieon.m3u8?id=dongnai3"
+            twitch_secret: "TWITCH_KEY_3"     # Khớp với TWITCH_KEY_3 của bạn
+          
+          - id: 3
+            name: "Kenh_TV360_Id175"
+            source_url: "https://sgclient.duckdns.org/source/tv360.m3u8?id=175"
+            twitch_secret: "TWITCH_KEY_2"     # Khớp với TWITCH_KEY_2 của bạn
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      - name: Install FFmpeg Standard
-        run: sudo apt-get install -y ffmpeg
+    - name: Install FFmpeg Fast
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y ffmpeg
 
-      - name: Live Now
-        run: |
-          SOURCE="https://sgclient.duckdns.org/source/tv360.m3u8?id=175"
+    - name: Live Now
+      env:
+        # Gọi chính xác Secret Key theo cấu hình ma trận ở trên
+        STREAM_KEY: ${{ secrets[matrix.twitch_secret] }}
+      run: |
+        echo "========== Khởi động máy ảo số ${{ matrix.id }} phát luồng: ${{ matrix.name }} =========="
+        
+        # Đặt tổng thời gian chạy an toàn cho mỗi chu kỳ là 2 tiếng 50 phút
+        end=$((SECONDS + 10200))
+        
+        while [ $SECONDS -lt $end ]; do
+          echo "---- Đang đẩy luồng trực tiếp sang Twitch ----"
           
-          echo "========== ĐANG PHÁT LUỒNG RIÊNG BIỆT KÊNH ID: 175 =========="
-          
-          end=$((SECONDS + 10200)) # Chạy trong 2 tiếng 50 phút
-          
-          while [ $SECONDS -lt $end ]; do
-            ffmpeg -re \
-              -fflags +genpts+discardcorrupt \
-              -analyzeduration 1000000 -probesize 1000000 \
-              -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
-              -reconnect_delay_max 5 -rw_timeout 5000000 \
-              -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
-              -i "$SOURCE" \
-              -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
-              -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
-              -c:a aac -b:a 128k -ar 44100 \
-              -f flv -user_agent "FMLE/3.0 (compatible; FMSc/1.0) OBS/30.0.0" "rtmp://live.twitch.tv/app/${{ secrets.TWITCH_KEY_2 }}"
+          # Sử dụng '-c:v copy -c:a copy' để giữ nguyên gốc luồng phát, CPU cực nhẹ
+          ffmpeg -re \
+            -fflags +genpts+discardcorrupt \
+            -analyzeduration 1500000 -probesize 1000000 \
+            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
+            -reconnect_delay_max 10 -rw_timeout 15000000 \
+            -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+            -i "${{ matrix.source_url }}" \
+            -c:v copy -c:a copy \
+            -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
             
-            echo "Kênh 175 gặp sự cố kết nối. Tự động thử lại sau 5 giây..."
-            sleep 5
-          done
+          echo "Mất kết nối với nguồn hoặc Twitch. Đang thử lại sau 5 giây..."
+          sleep 5
+        done
+        
+        echo "Đã hết thời gian chạy an toàn 2h50m. Đóng job để chờ chu kỳ sau."
