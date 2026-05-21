@@ -2,10 +2,8 @@ name: Stream_VieON_DongNai3
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # Tự động khởi động lại mỗi 3 tiếng
-  workflow_dispatch:
-  push:
-    branches: [ main ]
+    - cron: '0 */3 * * *' # Tự động chạy lại mỗi 3 tiếng cố định
+  workflow_dispatch: # Chỉ chạy khi bạn chủ động bấm nút kích hoạt bằng tay
 
 jobs:
   run-stream:
@@ -21,11 +19,10 @@ jobs:
 
     - name: Live Now
       env:
-        # Gọi trực tiếp Secret Key riêng cho Đồng Nai 3
         STREAM_KEY: ${{ secrets.TWITCH_KEY_3 }}
       run: |
         if [ -z "$STREAM_KEY" ]; then
-          echo "⚠️ Lỗi: Không tìm thấy Secret TWITCH_KEY_3 trên GitHub."
+          echo "⚠️ Lỗi: Không tìm thấy Secret TWITCH_KEY_3."
           exit 1
         fi
 
@@ -33,9 +30,9 @@ jobs:
         end=$((SECONDS + 10200))
         
         while [ $SECONDS -lt $end ]; do
-          echo "========== Khởi động luồng phát FFmpeg Đồng Nai 3 =========="
+          echo "========== [Đồng Nai 3] Đang đẩy luồng trực tiếp... =========="
           
-          ffmpeg -re \
+          ffmpeg -re -loglevel error \
             -fflags +genpts+discardcorrupt \
             -analyzeduration 1500000 -probesize 1000000 \
             -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
@@ -45,6 +42,6 @@ jobs:
             -c:v copy -c:a copy \
             -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
             
-          echo "Mất kết nối luồng gốc hoặc Twitch. Thử lại sau 5 giây..."
+          echo "Kết nối bị ngắt. Tự động kết nối lại sau 5 giây..."
           sleep 5
         done
