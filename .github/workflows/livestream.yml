@@ -37,20 +37,13 @@ jobs:
             echo "---- [$(date +'%H:%M:%S')] Đang đẩy luồng sang Twitch ----"
             
             # Giữ nguyên khung cấu hình gốc của bạn nhưng đổi sang -preset ultrafast để nhẹ máy nhất
-            ffmpeg -re -loglevel error \
-              -fflags +genpts+discardcorrupt \
-              -analyzeduration 1500000 -probesize 1000000 \
-              -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
-              -reconnect_delay_max 10 -rw_timeout 15000000 \
-              -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
-              -i "$SOURCE" \
-              -c:v libx264 -preset ultrafast -b:v 2500k -maxrate 3000k -bufsize 5000k \
-              -pix_fmt yuv420p -g 50 -c:a aac -b:a 128k -ar 44100 \
-              -f flv "rtmps://hkg.live.twitch.tv/app/$STREAM_KEY"
-            
-            echo "Luồng bị ngắt. Đang dọn dẹp và tự động thử lại sau 5 giây..."
-            killall -9 ffmpeg 2>/dev/null || true
-            sleep 5
-          done
-          
-          echo "========== Hoàn thành an toàn chu kỳ 3 tiếng =========="
+          ffmpeg -re -loglevel error \
+            -fflags +genpts+discardcorrupt \
+            -analyzeduration 1500000 -probesize 1000000 \
+            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
+            -reconnect_delay_max 10 -rw_timeout 15000000 \
+            -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+            -i "$SOURCE" \
+            -c:v libx264 -preset ultrafast -b:v 2500k \
+            -pix_fmt yuv420p -g 50 -c:a aac -b:a 128k -ar 44100 \
+            -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
