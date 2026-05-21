@@ -2,7 +2,7 @@ name: Stream_Pro_TV_Style
 
 on:
   schedule:
-    # Tự động chạy lại mỗi 3 tiếng để dọn cache và làm mới luồng phát
+    # Tự động chạy lại mỗi 3 tiếng để tránh giới hạn 6 tiếng của GitHub
     - cron: '0 */3 * * *' 
   workflow_dispatch:
 
@@ -28,18 +28,15 @@ jobs:
           fi
 
           SOURCE="https://sgclient.duckdns.org/source/tv360.m3u8?id=32"
+          end=$((SECONDS + 10200)) # 2h50m = 10200 giây
           
-          # Đặt tổng thời gian chạy cho toàn bộ bước này là 2 tiếng 50 phút
-          end=$((SECONDS + 10200))
+          echo "========== Khởi động luồng phát FFmpeg tối ưu mới =========="
           
-          echo "========== Khởi động hệ thống phát trực tiếp siêu nhẹ =========="
-          
-          # Vòng lặp chuẩn mã nguồn Linux, bọc biến cẩn thận chống sập Job ngang
           while [ "$SECONDS" -lt "$end" ]
           do
-            echo "---- [$(date +'%H:%M:%S')] Đang tiến hành đẩy luồng sang Twitch ----"
+            echo "---- [$(date +'%H:%M:%S')] Đang đẩy luồng sang Twitch ----"
             
-            # 🚀 CẤU HÌNH SIÊU NHẸ: Đã bật -loglevel error và chuyển hoàn toàn sang -c:v copy
+            # Giữ nguyên khung cấu hình gốc của bạn nhưng đổi sang -preset ultrafast để nhẹ máy nhất
             ffmpeg -re -loglevel error \
               -fflags +genpts+discardcorrupt \
               -analyzeduration 1500000 -probesize 1000000 \
@@ -47,13 +44,11 @@ jobs:
               -reconnect_delay_max 10 -rw_timeout 15000000 \
               -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
               -i "$SOURCE" \
-              -c:v copy -c:a copy \
-              -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
+              -c:v libx264 -preset ultrafast -b:v 2500k -maxrate 3000k -bufsize 5000k \
+              -pix_fmt yuv420p -g 50 -c:a aac -b:a 128k -ar 44100 \
+              -f flv "rtmps://hkg.live.twitch.tv/app/$STREAM_KEY"
             
-            echo "⚠️ Cảnh báo: Mất kết nối luồng hoặc bị Twitch đẩy ra!"
-            echo "Đang dọn dẹp bộ nhớ và tự động kết nối lại sau 5 giây..."
-            
-            # Giải phóng hoàn toàn các tiến trình treo ngầm trước khi kết nối lại
+            echo "Luồng bị ngắt. Đang dọn dẹp và tự động thử lại sau 5 giây..."
             killall -9 ffmpeg 2>/dev/null || true
             sleep 5
           done
