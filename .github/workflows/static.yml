@@ -1,33 +1,15 @@
-name: Livestream_Matrix_Super_Light
+name: Stream_VieON_DongNai3
 
 on:
   schedule:
-    # Tự động khởi động lại sau mỗi 3 tiếng để dọn cache và làm mới luồng phát
-    - cron: '0 */3 * * *'
+    - cron: '0 */3 * * *' # Tự động khởi động lại mỗi 3 tiếng
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   run-stream:
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        include:
-          - id: 1
-            name: "Kenh_VieON_DongNai3"
-            source_url: "https://sgclient.duckdns.org/source/vieon.m3u8?id=dongnai3"
-            key_position: 1 # Đứng đầu tiên: Lấy key số 1
-          
-          - id: 2
-            name: "Kenh_TV360_Id32"
-            source_url: "https://sgclient.duckdns.org/source/tv360.m3u8?id=32"
-            key_position: 2 # Đứng ở giữa: Lấy key số 2
-          
-          - id: 3
-            name: "Kenh_TV360_Id175"
-            source_url: "https://sgclient.duckdns.org/source/tv360.m3u8?id=175"
-            key_position: 3 # Đứng sau cùng: Lấy key số 3
-
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -39,22 +21,19 @@ jobs:
 
     - name: Live Now
       env:
-        # Truyền chuỗi Secret chung vào môi trường bảo mật của máy ảo
-        RAW_KEYS: ${{ secrets.ALL_TWITCH_KEYS }}
+        # Gọi trực tiếp Secret Key riêng cho Đồng Nai 3
+        STREAM_KEY: ${{ secrets.TWITCH_KEY_3 }}
       run: |
-        # 🚀 GIẢI PHÁP CHUẨN: Dùng awk để bẻ chính xác vị trí key theo dấu phẩy mà không lo lỗi hệ thống
-        STREAM_KEY=$(echo "$RAW_KEYS" | awk -v pos="${{ matrix.key_position }}" -F',' '{print $pos}')
-
         if [ -z "$STREAM_KEY" ]; then
-          echo "⚠️ Lỗi: Không lấy được Stream Key hợp lệ cho vị trí số ${{ matrix.key_position }}."
+          echo "⚠️ Lỗi: Không tìm thấy Secret TWITCH_KEY_3 trên GitHub."
           exit 1
         fi
 
-        echo "========== Khởi động máy ảo số ${{ matrix.id }} phát luồng: ${{ matrix.name }} =========="
+        SOURCE="https://sgclient.duckdns.org/source/vieon.m3u8?id=dongnai3"
         end=$((SECONDS + 10200))
         
         while [ $SECONDS -lt $end ]; do
-          echo "---- Đang đẩy luồng trực tiếp sang Twitch ----"
+          echo "========== Khởi động luồng phát FFmpeg Đồng Nai 3 =========="
           
           ffmpeg -re \
             -fflags +genpts+discardcorrupt \
@@ -62,10 +41,10 @@ jobs:
             -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
             -reconnect_delay_max 10 -rw_timeout 15000000 \
             -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
-            -i "${{ matrix.source_url }}" \
+            -i "$SOURCE" \
             -c:v copy -c:a copy \
             -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
             
-          echo "Mất kết nối. Tự động khởi động lại sau 5 giây..."
+          echo "Mất kết nối luồng gốc hoặc Twitch. Thử lại sau 5 giây..."
           sleep 5
         done
