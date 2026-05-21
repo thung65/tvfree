@@ -2,32 +2,32 @@ name: Livestream_Matrix_Super_Light
 
 on:
   schedule:
-    # Cứ mỗi 3 tiếng hệ thống tự khởi động lại để dọn dẹp cache và né giới hạn GitHub
+    # Hệ thống tự động khởi động lại mỗi 3 tiếng để giải phóng bộ nhớ máy ảo
     - cron: '0 */3 * * *'
-  workflow_dispatch: # Nút bấm để bạn tự kích hoạt bằng tay
+  workflow_dispatch: # Nút bấm để bạn tự kích hoạt chạy bằng tay lúc nào tùy thích
 
 jobs:
   run-stream:
     runs-on: ubuntu-latest
     
-    # 🌟 MA TRẬN TỰ ĐỘNG: Chia việc cho 3 máy ảo gánh 3 dòng key riêng biệt
+    # 🌟 GIẢI THUẬT MA TRẬN: Tự động chia việc cho 3 máy ảo chạy song song độc lập
     strategy:
       matrix:
         include:
           - id: 1
             name: "Kenh_TV360_Id32"
             source_url: "https://sgclient.duckdns.org/source/tv360.m3u8?id=32"
-            twitch_secret: "TWITCH_KEY"       # Khớp với TWITCH_KEY của bạn
+            key_position: 1 # Tự động bốc Key thứ 1 trong chuỗi Secret
           
           - id: 2
-            name: "Kenh_VieON_DongNai3"
-            source_url: "https://sgclient.duckdns.org/source/vieon.m3u8?id=dongnai3"
-            twitch_secret: "TWITCH_KEY_3"     # Khớp với TWITCH_KEY_3 của bạn
-          
-          - id: 3
             name: "Kenh_TV360_Id175"
             source_url: "https://sgclient.duckdns.org/source/tv360.m3u8?id=175"
-            twitch_secret: "TWITCH_KEY_2"     # Khớp với TWITCH_KEY_2 của bạn
+            key_position: 2 # Tự động bốc Key thứ 2 trong chuỗi Secret
+          
+          - id: 3
+            name: "Kenh_VieON_DongNai3"
+            source_url: "https://sgclient.duckdns.org/source/vieon.m3u8?id=dongnai3"
+            key_position: 3 # Tự động bốc Key thứ 3 trong chuỗi Secret
 
     steps:
     - name: Checkout Code
@@ -40,18 +40,27 @@ jobs:
 
     - name: Live Now
       env:
-        # Gọi chính xác Secret Key theo cấu hình ma trận ở trên
-        STREAM_KEY: ${{ secrets[matrix.twitch_secret] }}
+        # Gọi duy nhất một biến Secret chung chứa 3 key cách nhau bằng dấu phẩy
+        RAW_KEYS: ${{ secrets.ALL_TWITCH_KEYS }}
       run: |
+        # ✂️ Trích xuất chính xác Stream Key tương ứng với vị trí được cấu hình ở ma trận
+        STREAM_KEY=$(echo "$RAW_KEYS" | cut -d',' -f${{ matrix.key_position }})
+
+        # Kiểm tra an toàn: Nếu chuỗi key trống thì dừng tiến trình tránh lỗi đỏ
+        if [ -z "$STREAM_KEY" ]; then
+          echo "⚠️ Lỗi: Không thể lấy mã Stream Key tại vị trí số ${{ matrix.key_position }}. Vui lòng kiểm tra lại cấu hình Secret."
+          exit 0
+        fi
+
         echo "========== Khởi động máy ảo số ${{ matrix.id }} phát luồng: ${{ matrix.name }} =========="
         
-        # Đặt tổng thời gian chạy an toàn cho mỗi chu kỳ là 2 tiếng 50 phút
+        # Đặt tổng thời gian chạy an toàn cho mỗi chu kỳ máy ảo là 2 tiếng 50 phút (10200 giây)
         end=$((SECONDS + 10200))
         
         while [ $SECONDS -lt $end ]; do
           echo "---- Đang đẩy luồng trực tiếp sang Twitch ----"
           
-          # Sử dụng '-c:v copy -c:a copy' để giữ nguyên gốc luồng phát, CPU cực nhẹ
+          # Lệnh FFmpeg sử dụng '-c:v copy -c:a copy' giúp copy luồng thô trực tiếp, CPU máy ảo cực nhẹ (1%)
           ffmpeg -re \
             -fflags +genpts+discardcorrupt \
             -analyzeduration 1500000 -probesize 1000000 \
@@ -62,8 +71,8 @@ jobs:
             -c:v copy -c:a copy \
             -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
             
-          echo "Mất kết nối với nguồn hoặc Twitch. Đang thử lại sau 5 giây..."
+          echo "Mất kết nối với luồng nguồn hoặc Twitch. Đang tự động thử lại sau 5 giây..."
           sleep 5
         done
         
-        echo "Đã hết thời gian chạy an toàn 2h50m. Đóng job để chờ chu kỳ sau."
+        echo "Đã kết thúc thời gian chạy an toàn 2h50m của chu kỳ này."
