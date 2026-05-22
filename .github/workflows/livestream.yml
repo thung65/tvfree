@@ -5,6 +5,8 @@ on:
     # Tự động chạy lại mỗi 3 tiếng để tránh giới hạn 6 tiếng của GitHub
     - cron: '0 */3 * * *' 
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   run-stream:
@@ -15,42 +17,33 @@ jobs:
 
       - name: Install FFmpeg Fast
         run: |
-          sudo apt-get update -qq
           sudo apt-get install -y ffmpeg
 
       - name: Live Now
+        # Nạp Secret TWITCH_KEY vào biến môi trường STREAM_KEY một cách an toàn
         env:
           STREAM_KEY: ${{ secrets.TWITCH_KEY }}
         run: |
-          if [ -z "$STREAM_KEY" ]; then
-            echo "⚠️ Lỗi: Không tìm thấy Secret TWITCH_KEY."
-            exit 1
-          fi
-
           SOURCE="https://sgclient.duckdns.org/source/tv360.m3u8?id=32"
+          
+          # Đặt tổng thời gian chạy cho toàn bộ bước này là 2 tiếng 50 phút
           end=$((SECONDS + 10200)) # 2h50m = 10200 giây
           
-          echo "========== Khởi động luồng phát FFmpeg tối ưu mới =========="
-          
-          while [ "$SECONDS" -lt "$end" ]
-          do
-            echo "---- [$(date +'%H:%M:%S')] Đang đẩy luồng sang Twitch ----"
+          while [ $SECONDS -lt $end ]; do
+            echo "========== Khởi động luồng phát FFmpeg mới =========="
             
-            # Giữ nguyên khung cấu hình gốc của bạn nhưng đổi sang -preset ultrafast để nhẹ máy nhất
-            ffmpeg -re -loglevel error \
-              -fflags +genpts+discardcorrupt \
-              -analyzeduration 1500000 -probesize 1000000 \
+            # Đã chuyển sang rtmp://hkg.live.twitch.tv để sửa lỗi chặn kết nối và giảm giật lag
+            ffmpeg -re \
               -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
               -reconnect_delay_max 10 -rw_timeout 15000000 \
-              -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+              -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
               -i "$SOURCE" \
-              -c:v libx264 -preset ultrafast -b:v 2500k -maxrate 3000k -bufsize 5000k \
-              -pix_fmt yuv420p -g 50 -c:a aac -b:a 128k -ar 44100 \
-              -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
+              -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
+              -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
+              -c:a aac -b:a 128k -ar 44100 -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
             
-            echo "Luồng bị ngắt. Đang dọn dẹp và tự động thử lại sau 5 giây..."
-            killall -9 ffmpeg 2>/dev/null || true
+            echo "Mất kết nối với server gốc hoặc Twitch. Đang chuẩn bị thử lại sau 5 giây..."
             sleep 5
           done
           
-          echo "========== Hoàn thành an toàn chu kỳ 3 tiếng =========="
+          echo "Đã hết thời gian chạy an toàn 2h50m. Đóng job để đợi chu kỳ cron tiếp theo kích hoạt."
