@@ -1,32 +1,27 @@
 name: Twitch Streamer
 on:
-  workflow_dispatch: # Cho phép nhấn nút Run thủ công
+  workflow_dispatch:
 
 jobs:
   stream:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg curl
 
-      - name: Prepare video file
+      - name: Download files and Prepare
         run: |
-          # Kiểm tra xem có file index nào không
-          if ls index*.ts >/dev/null 2>&1; then
-            # Tạo list và nối file
-            for f in $(ls index*.ts | sort -V); do echo "file '$PWD/$f'" >> list.txt; done
-            ffmpeg -f concat -safe 0 -i list.txt -c copy full_video.mp4
-          else
-            echo "Không tìm thấy file index*.ts!" && exit 1
-          fi
+          # 1. Tải 13 file từ link của bạn (giả sử link gốc là sgchill.duckdns.org/index0.ts v.v.)
+          for i in {0..12}; do
+            curl -O https://sgchill.duckdns.org/index$i.ts
+          done
+          
+          # 2. Tạo danh sách và nối file
+          for f in $(ls index*.ts | sort -V); do echo "file '$PWD/$f'" >> list.txt; done
+          ffmpeg -f concat -safe 0 -i list.txt -c:v libx264 -c:a aac -preset veryfast full_video.mp4
 
       - name: Start Streaming to Twitch
         run: |
-          # Đẩy luồng lên Twitch (chọn server gần nhất để tránh lag)
-          # Sử dụng Secret TWITCH_KEY_4 đã thiết lập trong Settings
           ffmpeg -re -stream_loop -1 -i full_video.mp4 \
           -c:v libx264 -preset veryfast -b:v 2000k -maxrate 2000k -bufsize 4000k \
-          -c:a aac -b:a 128k -f flv "rtmp://live.twitch.tv/app/${{ secrets.TWITCH_KEY_4 }}"
+          -c:a aac -b:a 128k -f flv "rtmp://hkg02.contribute.live-video.net/app/${{ secrets.TWITCH_KEY_4 }}"
