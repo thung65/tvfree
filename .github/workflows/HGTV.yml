@@ -24,7 +24,7 @@ jobs:
           STREAM_KEY: ${{ secrets.TWITCH_KEY_5 }}
         run: |
           # Thay link dưới đây bằng link .m3u8 hoặc .mpd trực tiếp lấy từ tab Network (F12)
-          SOURCE="LINK_STREAM_REAL_O_DAY"
+          SOURCE="https://vpsttt.vietanhtv.top/tv360/tv360.php?id=99"
           
           # Tổng thời gian chạy 2h50m (10200 giây)
           end=$((SECONDS + 10200))
@@ -40,7 +40,7 @@ jobs:
               -c:v libx264 -preset veryfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
               -c:a aac -b:a 128k -ar 44100 \
-              -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
+              -f flv "rtmps://live.twitch.tv/app/${{ secrets.TWITCH_KEY_5 }}"
             
             echo "Luồng bị ngắt. Đang khởi động lại sau 5 giây..."
             sleep 5
