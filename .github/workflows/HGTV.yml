@@ -22,7 +22,7 @@ jobs:
       - name: Live Now
         # Nạp Secret TWITCH_KEY vào biến môi trường STREAM_KEY một cách an toàn
         run: |
-          SOURCE="https://freem3u.xyz/api/live/play.mpd?vid=99"
+          SOURCE="https://vpsttt.vietanhtv.top/tv360/tv360.php?id=99"
           
           # Đặt tổng thời gian chạy cho toàn bộ bước này là 2 tiếng 50 phút
           end=$((SECONDS + 10200)) # 2h50m = 10200 giây
