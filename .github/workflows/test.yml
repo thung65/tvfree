@@ -26,4 +26,4 @@ jobs:
           # 3. Phát luồng lặp lại không giới hạn
           ffmpeg -re -stream_loop -1 -i full_video.mp4 \
           -c:v libx264 -preset veryfast -b:v 2000k -maxrate 2000k -bufsize 4000k \
-          -c:a aac -b:a 128k -f flv "rtmp://hkg02.contribute.live-video.net/app/${{ secrets.TWITCH_KEY_4 }}"
+          -c:a aac -b:a 128k -f flv "rtmp://live.twitch.tv/app/${{ secrets.TWITCH_KEY_4 }}"
