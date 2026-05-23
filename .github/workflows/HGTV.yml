@@ -1,20 +1,47 @@
-      - name: Live Now
+name: Stream_Pro_TV_Style
+
+on:
+  schedule:
+    - cron: '0 */3 * * *' 
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  run-stream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg
         run: |
-          SOURCE="https://vpsttt.vietanhtv.top/tv360/tv360.php?id=99"
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Live Now
+        env:
+          STREAM_KEY: ${{ secrets.TWITCH_KEY_5 }}
+        run: |
+          # Thay link dưới đây bằng link .m3u8 hoặc .mpd trực tiếp lấy từ tab Network (F12)
+          SOURCE="LINK_STREAM_REAL_O_DAY"
+          
+          # Tổng thời gian chạy 2h50m (10200 giây)
           end=$((SECONDS + 10200))
           
           while [ $SECONDS -lt $end ]; do
-            echo "========== Khởi động lại luồng FFmpeg =========="
+            echo "========== Bắt đầu luồng phát =========="
             
             ffmpeg -y \
-              -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+              -re \
+              -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
               -headers "Referer: https://vietanhtv.id.vn/" \
-              -re -i "$SOURCE" \
+              -i "$SOURCE" \
               -c:v libx264 -preset veryfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
               -c:a aac -b:a 128k -ar 44100 \
-              -f flv "rtmps://live.twitch.tv/app/${{ secrets.TWITCH_KEY_5 }}"
+              -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
             
-            echo "Lỗi hoặc ngắt kết nối. Đang thử lại sau 5 giây..."
+            echo "Luồng bị ngắt. Đang khởi động lại sau 5 giây..."
             sleep 5
           done
