@@ -6,22 +6,24 @@ jobs:
   stream:
     runs-on: ubuntu-latest
     steps:
-      - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg curl
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Download files and Prepare
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Prepare video
         run: |
-          # 1. Tải 13 file từ link của bạn (giả sử link gốc là sgchill.duckdns.org/index0.ts v.v.)
-          for i in {0..12}; do
-            curl -O https://sgchill.duckdns.org/index$i.ts
-          done
-          
-          # 2. Tạo danh sách và nối file
+          # 1. Tạo danh sách file theo đúng thứ tự (0, 1, 2... 12)
+          # 'sort -V' đảm bảo 10 đứng sau 2, không bị lỗi thứ tự
           for f in $(ls index*.ts | sort -V); do echo "file '$PWD/$f'" >> list.txt; done
+          
+          # 2. Gộp thành file MP4 chuẩn để tránh khựng hình (đơ) khi chuyển file
           ffmpeg -f concat -safe 0 -i list.txt -c:v libx264 -c:a aac -preset veryfast full_video.mp4
 
-      - name: Start Streaming to Twitch
+      - name: Stream to Twitch
         run: |
+          # 3. Phát luồng lặp lại không giới hạn
           ffmpeg -re -stream_loop -1 -i full_video.mp4 \
           -c:v libx264 -preset veryfast -b:v 2000k -maxrate 2000k -bufsize 4000k \
           -c:a aac -b:a 128k -f flv "rtmp://hkg02.contribute.live-video.net/app/${{ secrets.TWITCH_KEY_4 }}"
