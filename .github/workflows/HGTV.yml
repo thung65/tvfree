@@ -24,24 +24,19 @@ jobs:
         run: |
           SOURCE="https://vpsttt.vietanhtv.top/tv360/tv360.php?id=99"
           
-          # Đặt tổng thời gian chạy cho toàn bộ bước này là 2 tiếng 50 phút
-          end=$((SECONDS + 10200)) # 2h50m = 10200 giây
+          end=$((SECONDS + 10200))
           
           while [ $SECONDS -lt $end ]; do
-            echo "========== Khởi động luồng phát FFmpeg mới =========="
+            echo "========== Khởi động luồng phát MPD qua FFmpeg =========="
             
-            # Đã chuyển sang rtmp://hkg.live.twitch.tv để sửa lỗi chặn kết nối và giảm giật lag
             ffmpeg -re \
-              -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
-              -reconnect_delay_max 10 -rw_timeout 15000000 \
+              -http_persistent 1 \
               -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
               -i "$SOURCE" \
               -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
               -c:a aac -b:a 128k -ar 44100 -f flv "rtmps://live.twitch.tv/app/${{ secrets.TWITCH_KEY_5 }}"
             
-            echo "Mất kết nối với server gốc hoặc Twitch. Đang chuẩn bị thử lại sau 5 giây..."
+            echo "Kết nối gián đoạn. Đang khởi động lại sau 5 giây..."
             sleep 5
           done
-          
-          echo "Đã hết thời gian chạy an toàn 2h50m. Đóng job để đợi chu kỳ cron tiếp theo kích hoạt."
