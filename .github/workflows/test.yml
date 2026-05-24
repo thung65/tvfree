@@ -1,7 +1,12 @@
 name: Twitch Streamer
 on:
+  schedule:
+    # Tự động chạy lại mỗi 3 tiếng để tránh giới hạn 6 tiếng của GitHub
+    - cron: '0 */3 * * *' 
   workflow_dispatch:
-
+  push:
+    branches: [ main ]
+    
 jobs:
   stream:
     runs-on: ubuntu-latest
