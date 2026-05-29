@@ -22,7 +22,7 @@ jobs:
       - name: Live Now
         # Nạp Secret TWITCH_KEY vào biến môi trường STREAM_KEY một cách an toàn
         run: |
-          SOURCE="https://hoiquan.dpdns.org/VTVGo/?sctv1"
+          SOURCE="https://xemtvtructuyen.duckdns.org/source/vtvgo.m3u8?id=sctv1"
           
           # Đặt tổng thời gian chạy cho toàn bộ bước này là 2 tiếng 50 phút
           end=$((SECONDS + 10200)) # 2h50m = 10200 giây
