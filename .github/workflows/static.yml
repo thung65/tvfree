@@ -17,6 +17,7 @@ jobs:
 
       - name: Install FFmpeg Fast
         run: |
+          sudo apt-get upgrade -y
           sudo apt-get install -y ffmpeg
 
       - name: Live Now
@@ -24,7 +25,7 @@ jobs:
         env:
           STREAM_KEY: ${{ secrets.TWITCH_KEY_2 }}
         run: |
-          SOURCE="https://sgclient.duckdns.org/source/tv360.m3u8?id=175"
+          SOURCE="https://vpsttt.vietanhtv.top/tv360/tv360.php?id=175"
           
           # Đặt tổng thời gian chạy cho toàn bộ bước này là 2 tiếng 50 phút
           end=$((SECONDS + 10200)) # 2h50m = 10200 giây
