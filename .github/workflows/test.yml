@@ -22,7 +22,7 @@ jobs:
 
       - name: Live Now
         env:
-          STREAM_KEY: ${{ secrets.TWITCH_KEY }}
+          STREAM_KEY: ${{ secrets.TWITCH_KEY_4}}
         run: |
           SOURCE="https://vtvgolive-vtv.vtvdigital.vn/vtvgo/vtv9-720p.m3u8"
           
