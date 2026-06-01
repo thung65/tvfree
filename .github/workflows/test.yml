@@ -2,7 +2,7 @@ name: Stream_Pro_TV_Style
 
 on:
   schedule:
-    # Tự động chạy lại mỗi 3 tiếng để tránh giới hạn 6 tiếng của GitHub
+    # Chạy 3 tiếng một lần. Chú ý: Nên để lệnh cron an toàn
     - cron: '0 */3 * * *' 
   workflow_dispatch:
   push:
@@ -11,37 +11,30 @@ on:
 jobs:
   run-stream:
     runs-on: ubuntu-latest
+    # Thêm timeout để tránh việc Job bị treo lãng phí tài khoản
+    timeout-minutes: 350 # 350 phút ~ 5 tiếng 50 phút
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg Fast
-        run: |
-          sudo apt-get install -y ffmpeg
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Live Now
-        # Nạp Secret TWITCH_KEY vào biến môi trường STREAM_KEY một cách an toàn
+        env:
+          STREAM_KEY: ${{ secrets.TWITCH_KEY }}
         run: |
           SOURCE="https://vtvgolive-vtv.vtvdigital.vn/vtvgo/vtv9-720p.m3u8"
           
-          # Đặt tổng thời gian chạy cho toàn bộ bước này là 2 tiếng 50 phút
-          end=$((SECONDS + 10200)) # 2h50m = 10200 giây
-          
-          while [ $SECONDS -lt $end ]; do
-            echo "========== Khởi động luồng phát FFmpeg mới =========="
+          # Dùng timeout của lệnh để đảm bảo job tự kết thúc trước giới hạn 6h
+          # Chạy trong 5 tiếng 40 phút (20400 giây)
+          timeout 20400 ffmpeg -re \
+            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
+            -reconnect_delay_max 5 -rw_timeout 20000000 \
+            -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
+            -i "$SOURCE" \
+            -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
+            -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
+            -c:a aac -b:a 128k -ar 44100 -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
             
-            # Đã chuyển sang rtmp://hkg.live.twitch.tv để sửa lỗi chặn kết nối và giảm giật lag
-            ffmpeg -re \
-              -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
-              -reconnect_delay_max 10 -rw_timeout 15000000 \
-              -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
-              -i "$SOURCE" \
-              -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
-              -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
-              -c:a aac -b:a 128k -ar 44100 -f flv "rtmps://live.twitch.tv/app/${{ secrets.TWITCH_KEY_4}}"
-            
-            echo "Mất kết nối với server gốc hoặc Twitch. Đang chuẩn bị thử lại sau 5 giây..."
-            sleep 5
-          done
-          
-          echo "Đã hết thời gian chạy an toàn 2h50m. Đóng job để đợi chu kỳ cron tiếp theo kích hoạt."
+          echo "Đã kết thúc job an toàn."
