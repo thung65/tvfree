@@ -2,7 +2,7 @@ name: Stream_Pro_TV_Style_175
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Chạy lại lịch trình mỗi 6 tiếng
+    - cron: '0 */6 * * *' 
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -10,8 +10,7 @@ on:
 jobs:
   run-stream:
     runs-on: ubuntu-latest
-    # Đặt timeout là 355 phút để đảm bảo job kết thúc sạch sẽ trước ngưỡng 6 tiếng
-    timeout-minutes: 355 
+    timeout-minutes: 355
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -25,16 +24,14 @@ jobs:
         run: |
           SOURCE="https://sgchill.duckdns.org/tiktok_video_2.mp4"
           
-          # Vòng lặp này giúp FFmpeg tự hồi phục nếu lỗi mạng trong 6 tiếng đó
           while true; do
-            echo "========== Bắt đầu phát video - Chu kỳ 6 tiếng =========="
+            echo "========== Bắt đầu phát Video (Copy luồng - không giải mã) =========="
             
+            # Sử dụng -c copy để bỏ qua bước giải mã, giúp giảm tải CPU và tránh giật
             ffmpeg -y -re -stream_loop -1 \
               -i "$SOURCE" \
-              -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
-              -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
-              -c:a aac -b:a 128k -ar 44100 -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
+              -c copy -f flv "rtmp://live.twitch.tv/app/$STREAM_KEY"
             
-            echo "Luồng bị ngắt, khởi động lại ngay..."
+            echo "Luồng bị ngắt. Đang khởi động lại sau 5 giây..."
             sleep 5
           done
