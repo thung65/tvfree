@@ -21,7 +21,7 @@ jobs:
 
       - name: Live Now
         env:
-          STREAM_KEY: ${{ secrets.TWITCH_KEY_2 }}
+          STREAM_KEY: ${{ sểcts.TWITCH_KEY_5 }}
         run: |
           SOURCE="https://sgchill.duckdns.org/tiktok_video_2.mp4"
           
