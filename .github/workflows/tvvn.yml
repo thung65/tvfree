@@ -1,10 +1,10 @@
-Name: 🚀 Bấm Một Nút - Chạy 3 Luồng Giữa
+Name: Bam Mot Nut - Chay 3 Luong Giua
 
 on:
-  workflow_dispatch: # Giữ nguyên nút bấm chạy tay khi bạn muốn kích hoạt ngay
+  workflow_dispatch: # Tạo nút bấm chạy tay trên giao diện Actions
   
   schedule:
-    # Tự động khởi động lại tất cả 3 luồng sau mỗi 5 tiếng 50 phút (350 phút)
+    # Tự động khởi động lại tất cả 3 luồng sau mỗi 5 tiếng 50 phút
     - cron: '*/350 * * * *'
 
 jobs:
