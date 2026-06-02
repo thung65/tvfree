@@ -1,21 +1,18 @@
 name: Bam Mot Nut - Chay 3 Luong Giua
 
 on:
-  workflow_dispatch: # Tạo nút bấm chạy tay trên giao diện Actions
-  
+  workflow_dispatch:
   schedule:
-    # Tự động khởi động lại tất cả 3 luồng sau mỗi 5 tiếng 50 phút
-    - cron: '*/350 * * * *'
+    # Chạy lại định kỳ mỗi 5 tiếng 50 phút
+    - cron: '50 */5 * * *'
 
 jobs:
-  # 1. Kích hoạt file giữa đầu tiên: dongnai3.yml
+  # Kích hoạt đồng thời 3 file workflow con
   chay-dongnai3:
     uses: ./.github/workflows/dongnai3.yml
 
-  # 2. Kích hoạt file giữa thứ hai: livestream.yml
   chay-livestream:
     uses: ./.github/workflows/livestream.yml
 
-  # 3. Kích hoạt file giữa thứ ba: static.yml
   chay-static:
     uses: ./.github/workflows/static.yml
