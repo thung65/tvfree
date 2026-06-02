@@ -1,18 +1,19 @@
-name: Bam Mot Nut - Chay 3 Luong Giua
+name: Bam Mot Nut - Chay 3 Luong Tuan Tu
 
 on:
   workflow_dispatch:
   schedule:
-    # Chạy lại định kỳ mỗi 5 tiếng 50 phút
     - cron: '50 */5 * * *'
 
 jobs:
-  # Kích hoạt đồng thời 3 file workflow con
   chay-dongnai3:
     uses: ./.github/workflows/dongnai3.yml
 
+  # 'needs' giúp luồng này đợi luồng trên chạy xong mới bắt đầu
   chay-livestream:
+    needs: chay-dongnai3
     uses: ./.github/workflows/livestream.yml
 
   chay-static:
+    needs: chay-livestream
     uses: ./.github/workflows/static.yml
