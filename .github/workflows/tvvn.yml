@@ -1,0 +1,21 @@
+Name: 🚀 Bấm Một Nút - Chạy 3 Luồng Giữa
+
+on:
+  workflow_dispatch: # Giữ nguyên nút bấm chạy tay khi bạn muốn kích hoạt ngay
+  
+  schedule:
+    # Tự động khởi động lại tất cả 3 luồng sau mỗi 5 tiếng 50 phút (350 phút)
+    - cron: '*/350 * * * *'
+
+jobs:
+  # 1. Kích hoạt file giữa đầu tiên: dongnai3.yml
+  chay-dongnai3:
+    uses: ./.github/workflows/dongnai3.yml
+
+  # 2. Kích hoạt file giữa thứ hai: livestream.yml
+  chay-livestream:
+    uses: ./.github/workflows/livestream.yml
+
+  # 3. Kích hoạt file giữa thứ ba: static.yml
+  chay-static:
+    uses: ./.github/workflows/static.yml
