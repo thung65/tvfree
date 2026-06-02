@@ -1,12 +1,10 @@
-name: Stream_Pro_TV_Style
+name: Stream_Pro_TV_Style_dongnai3
 
 on:
+  schedule:
+    - cron: '0 */6 * * *' # Cứ mỗi 6 tiếng nó tự kiểm tra và chạy lại
   workflow_dispatch:
-  workflow_call:  # <-- Bắt buộc phải thêm dòng này vào các file con
-  repository_dispatch:
-    types: [trigger-next-stream]
-  push:
-    branches: [ main ]
+  workflow_call:
 
 jobs:
   run-stream:
