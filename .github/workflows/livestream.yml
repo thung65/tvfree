@@ -1,9 +1,9 @@
-name: Stream_Pro_TV_Style
+name: Stream_Pro_TV_Style_32
 
 on:
   schedule:
-    # Chạy 3 tiếng một lần. Chú ý: Nên để lệnh cron an toàn
-    - cron: '0 */3 * * *' 
+    # Chạy định kỳ 6 tiếng một lần
+    - cron: '0 */6 * * *' 
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -11,8 +11,8 @@ on:
 jobs:
   run-stream:
     runs-on: ubuntu-latest
-    # Thêm timeout để tránh việc Job bị treo lãng phí tài khoản
-    timeout-minutes: 350 # 350 phút ~ 5 tiếng 50 phút
+    # Tăng tối đa thời gian chạy của Job lên đúng 360 phút (6 tiếng)
+    timeout-minutes: 360 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -26,9 +26,10 @@ jobs:
         run: |
           SOURCE="https://vpsttt.vietanhtv.top/tv360/tv360.php?id=32"
           
-          # Dùng timeout của lệnh để đảm bảo job tự kết thúc trước giới hạn 6h
-          # Chạy trong 5 tiếng 40 phút (20400 giây)
-          timeout 20400 ffmpeg -re \
+          echo "Bắt đầu phát luồng Stream..."
+          
+          # SỬA LẠI: Phát trong 5 tiếng 59 phút (21540 giây)
+          timeout 21540 ffmpeg -re \
             -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
             -reconnect_delay_max 5 -rw_timeout 20000000 \
             -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
@@ -37,5 +38,10 @@ jobs:
             -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 128k -ar 44100 -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
             
-          echo "Đã kết thúc job an toàn."
-
+          echo "Đã tắt luồng phát cũ."
+          echo "Hệ thống tạm nghỉ 1 phút trước khi kết thúc job..."
+          
+          # LỆNH MỚI: Ép hệ thống dừng lại đúng 60 giây (1 phút)
+          sleep 60
+          
+          echo "Hết thời gian chờ. Sẵn sàng cho chu kỳ tiếp theo."
