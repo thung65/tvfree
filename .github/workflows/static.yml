@@ -2,11 +2,10 @@ name: Stream_Pro_TV_Style_175
 
 on:
   schedule:
-    - cron: '0 */3 * * *' 
+    - cron: '0 */6 * * *' # Cứ mỗi 6 tiếng nó tự kiểm tra và chạy lại
   workflow_dispatch:
-  push:
-    branches: [ main ]
-
+  workflow_call:
+ 
 jobs:
   run-stream:
     runs-on: ubuntu-latest
