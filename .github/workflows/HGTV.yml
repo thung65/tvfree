@@ -25,13 +25,14 @@ jobs:
           SOURCE="https://sgchill.duckdns.org/tiktok_video_2.mp4"
           
           while true; do
-            echo "========== Bắt đầu phát Video (Copy luồng - không giải mã) =========="
+            echo "========== Phát lại (Mã hóa nhanh) =========="
             
-            # Sử dụng -c copy để bỏ qua bước giải mã, giúp giảm tải CPU và tránh giật
+            # Thay -c copy bằng -c:v libx264 -preset ultrafast
             ffmpeg -y -re -stream_loop -1 \
               -i "$SOURCE" \
-              -c copy -f flv "rtmp://live.twitch.tv/app/$STREAM_KEY"
+              -c:v libx264 -preset ultrafast -b:v 2500k \
+              -c:a aac -b:a 128k \
+              -f flv "rtmp://live.twitch.tv/app/$STREAM_KEY"
             
-            echo "Luồng bị ngắt. Đang khởi động lại sau 5 giây..."
             sleep 5
           done
