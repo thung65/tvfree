@@ -1,9 +1,10 @@
 name: Stream_Pro_TV_Style
 
 on:
-  schedule:
-    - cron: '0 */3 * * *' 
   workflow_dispatch:
+  workflow_call:  # <-- Bắt buộc phải thêm dòng này vào các file con
+  repository_dispatch:
+    types: [trigger-next-stream]
   push:
     branches: [ main ]
 
