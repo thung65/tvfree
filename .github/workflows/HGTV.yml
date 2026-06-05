@@ -22,14 +22,20 @@ jobs:
         env:
           STREAM_KEY: ${{ secrets.TWITCH_KEY_5 }}
         run: |
-          SOURCE="https://sgchill.duckdns.org/tiktok_video_2.mp4"
+          # 1. Tạo file danh sách phát các file .ts
+          # Lưu ý: Thay đổi đường dẫn base_url cho đúng với link thực tế từ repo tvfree
+          BASE_URL="https://raw.githubusercontent.com/thung65/tvfree/main"
+          
+          echo "Tạo file playlist..."
+          for i in {0..13}; do
+            echo "file '$BASE_URL/index$i.ts'" >> playlist.txt
+          done
           
           while true; do
-            echo "========== Phát lại (Mã hóa nhanh) =========="
+            echo "========== Phát danh sách index0 -> index13 =========="
             
-            # Thay -c copy bằng -c:v libx264 -preset ultrafast
-            ffmpeg -y -re -stream_loop -1 \
-              -i "$SOURCE" \
+            # Sử dụng concat demuxer để nối các file .ts
+            ffmpeg -y -re -f concat -safe 0 -i playlist.txt \
               -c:v libx264 -preset ultrafast -b:v 2500k \
               -c:a aac -b:a 128k \
               -f flv "rtmp://live.twitch.tv/app/$STREAM_KEY"
