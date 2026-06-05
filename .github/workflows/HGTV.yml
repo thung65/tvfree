@@ -22,20 +22,23 @@ jobs:
         env:
           STREAM_KEY: ${{ secrets.TWITCH_KEY_5 }}
         run: |
-          # 1. Tạo file danh sách phát các file .ts
-          # Lưu ý: Thay đổi đường dẫn base_url cho đúng với link thực tế từ repo tvfree
+          # 1. Tải trực tiếp tất cả file index0 đến index13 về thư mục gốc
           BASE_URL="https://raw.githubusercontent.com/thung65/tvfree/main"
           
-          echo "Tạo file playlist..."
+          echo "Đang tải các file..."
           for i in {0..13}; do
-            echo "file '$BASE_URL/index$i.ts'" >> playlist.txt
+            curl -L "$BASE_URL/index$i.ts" -o "index$i.ts"
           done
           
+          # 2. Gộp trực tiếp các file lại thành 'full_stream.ts'
+          echo "Đang gộp file..."
+          cat index0.ts index1.ts index2.ts index3.ts index4.ts index5.ts index6.ts index7.ts index8.ts index9.ts index10.ts index11.ts index12.ts index13.ts > full_stream.ts
+          
+          # 3. Phát file đã gộp
           while true; do
-            echo "========== Phát danh sách index0 -> index13 =========="
+            echo "========== Phát file đã gộp =========="
             
-            # Sử dụng concat demuxer để nối các file .ts
-            ffmpeg -y -re -f concat -safe 0 -i playlist.txt \
+            ffmpeg -y -re -i full_stream.ts \
               -c:v libx264 -preset ultrafast -b:v 2500k \
               -c:a aac -b:a 128k \
               -f flv "rtmp://live.twitch.tv/app/$STREAM_KEY"
