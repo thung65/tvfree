@@ -1,16 +1,16 @@
-name: Stream_Pro_TV_Style_175
+name: Stream_Pro_TV_Style_32
 
 on:
   schedule:
-    - cron: '0 */6 * * *' 
+    - cron: '0 */6 * * *' # Cứ mỗi 6 tiếng nó tự kiểm tra và chạy lại
   workflow_dispatch:
-  push:
-    branches: [ main ]
+  workflow_call:
 
 jobs:
   run-stream:
     runs-on: ubuntu-latest
-    timeout-minutes: 355
+    # Tăng tối đa thời gian chạy của Job lên đúng 360 phút (6 tiếng)
+    timeout-minutes: 360 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -22,14 +22,24 @@ jobs:
         env:
           STREAM_KEY: ${{ secrets.TWITCH_KEY_5 }}
         run: |
-          SOURCE_URL="https://sgchill.duckdns.org/tiktok_video_2.mp4"
+          SOURCE="https://vpsttt.vietanhtv.top/sctv/tv.php?id=sctv1-hd-7f2aafec"
           
-          echo "========== Đang phát từ URL: $SOURCE_URL =========="
+          echo "Bắt đầu phát luồng Stream..."
           
-          ffmpeg -y -re -stream_loop -1 -i "$SOURCE_URL" \
-            -c:v libx264 -preset ultrafast -b:v 2500k \
-            -c:a aac -b:a 128k \
-              -f flv "rtmp://live.twitch.tv/app/$STREAM_KEY"
+          # SỬA LẠI: Phát trong 5 tiếng 59 phút (21540 giây)
+          timeout 21540 ffmpeg -re \
+            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
+            -reconnect_delay_max 5 -rw_timeout 20000000 \
+            -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
+            -i "$SOURCE" \
+            -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
+            -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
+            -c:a aac -b:a 128k -ar 44100 -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
             
-            sleep 5
-          done
+          echo "Đã tắt luồng phát cũ."
+          echo "Hệ thống tạm nghỉ 1 phút trước khi kết thúc job..."
+          
+          # LỆNH MỚI: Ép hệ thống dừng lại đúng 60 giây (1 phút)
+          sleep 60
+          
+          echo "Hết thời gian chờ. Sẵn sàng cho chu kỳ tiếp theo."
