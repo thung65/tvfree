@@ -2,15 +2,13 @@ name: Stream_Pro_TV_Style_32
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Cứ mỗi 6 tiếng nó tự kiểm tra và chạy lại
+    - cron: '0 */6 * * *' # Chạy mỗi 6 tiếng
   workflow_dispatch:
-  workflow_call:
 
 jobs:
   run-stream:
     runs-on: ubuntu-latest
-    # Tăng tối đa thời gian chạy của Job lên đúng 360 phút (6 tiếng)
-    timeout-minutes: 360 
+    timeout-minutes: 360 # Giới hạn tối đa 6 tiếng cho cả job
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -18,28 +16,31 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Live Now
-        env:
-          STREAM_KEY: ${{ secrets.TWITCH_KEY }}
+      - name: Process Stream
         run: |
-          SOURCE="https://vpsttt.vietanhtv.top/tv360/tv360.php?id=32"
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
-          echo "Bắt đầu phát luồng Stream..."
+          # Vòng lặp để đảm bảo tính liên tục
+          # Chạy stream trong 5 tiếng 59 phút (21540 giây)
+          echo "Bắt đầu chu kỳ stream..."
           
-          # SỬA LẠI: Phát trong 5 tiếng 59 phút (21540 giây)
-          timeout 21540 ffmpeg -re \
-            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
-            -reconnect_delay_max 5 -rw_timeout 20000000 \
-            -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
-            -i "$SOURCE" \
-            -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
-            -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
-            -c:a aac -b:a 128k -ar 44100 -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
+          timeout 21540 ffmpeg -y \
+            -re -i "https://vpsttt.vietanhtv.top/tv360/tv360.php?id=32" \
+            -c copy -map 0 -f segment \
+            -segment_list index.m3u8 -segment_wrap 3 \
+            -segment_time 10 output%03d.ts
             
-          echo "Đã tắt luồng phát cũ."
-          echo "Hệ thống tạm nghỉ 1 phút trước khi kết thúc job..."
+          echo "Đã kết thúc thời gian stream 6 tiếng."
           
-          # LỆNH MỚI: Ép hệ thống dừng lại đúng 60 giây (1 phút)
+          # Xóa các file cũ trước khi kết thúc
+          rm -f *.ts
+          git add index.m3u8
+          git commit -m "Cleanup: $(date)" || echo "Nothing to commit"
+          git push origin main
+          
+          # Dừng lại 1 phút theo yêu cầu
+          echo "Hệ thống tạm nghỉ 1 phút trước khi khởi động lại..."
           sleep 60
           
-          echo "Hết thời gian chờ. Sẵn sàng cho chu kỳ tiếp theo."
+          echo "Hoàn thành chu kỳ."
