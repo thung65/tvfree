@@ -1,16 +1,16 @@
-name: Stream_Pro_TV_Style_32
+Name: Stream_Pro_TV_Style_32
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */6 * * *' # Cứ mỗi 6 tiếng nó tự kiểm tra và chạy lại
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   run-stream:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
-    permissions:
-      contents: write # QUAN TRỌNG: Cấp quyền ghi vào repo
+    # Tăng tối đa thời gian chạy của Job lên đúng 360 phút (6 tiếng)
+    timeout-minutes: 360 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -18,30 +18,28 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Stream and Sync
+      - name: Live Now
+        env:
+          STREAM_KEY: ${{ secrets.TWITCH_KEY }}
         run: |
-          # 1. Cấu hình git
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          SOURCE="https://vpsttt.vietanhtv.top/tv360/tv360.php?id=32"
           
-          echo "Bắt đầu chu kỳ stream..."
+          echo "Bắt đầu phát luồng Stream..."
           
-          # 2. Chạy FFmpeg nền với chế độ ghi đè (Vòng lặp 3 file)
-          # -segment_wrap 3: Chỉ dùng 3 file ts (000, 001, 002) rồi ghi đè
-          ffmpeg -y -re -i "https://vpsttt.vietanhtv.top/tv360/tv360.php?id=32" \
-            -c copy -map 0 -f segment \
-            -segment_list index.m3u8 -segment_list_flags +live \
-            -segment_wrap 3 -segment_time 10 output%03d.ts &
+          # SỬA LẠI: Phát trong 5 tiếng 59 phút (21540 giây)
+          timeout 21540 ffmpeg -re \
+            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
+            -reconnect_delay_max 5 -rw_timeout 20000000 \
+            -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
+            -i "$SOURCE" \
+            -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
+            -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
+            -c:a aac -b:a 128k -ar 44100 -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
+            
+          echo "Đã tắt luồng phát cũ."
+          echo "Hệ thống tạm nghỉ 1 phút trước khi kết thúc job..."
           
-          # 3. Vòng lặp cập nhật lên GitHub mỗi 60 giây
-          # Cách này giúp file m3u8 luôn được update mà không cần đợi 6 tiếng
-          for i in {1..359}; do
-            sleep 60
-            git add index.m3u8 output*.ts
-            git commit -m "Auto-update stream: $(date +'%H:%M:%S')" || echo "No changes"
-            git push origin main --force
-          done
-          
-          # 4. Khi hết 6 tiếng, kết thúc job và nghỉ 1 phút
-          echo "Đã hết 6 tiếng, tạm nghỉ..."
+          # LỆNH MỚI: Ép hệ thống dừng lại đúng 60 giây (1 phút)
           sleep 60
+          
+          echo "Hết thời gian chờ. Sẵn sàng cho chu kỳ tiếp theo."
