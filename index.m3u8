@@ -57,3 +57,9 @@ output000.ts
 output001.ts
 #EXTINF:2.440000,
 output002.ts
+#EXTINF:4.840000,
+output000.ts
+#EXTINF:7.040000,
+output001.ts
+#EXTINF:2.440000,
+output002.ts
