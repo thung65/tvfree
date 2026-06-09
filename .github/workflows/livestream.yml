@@ -2,13 +2,13 @@ name: Stream_Pro_TV_Style_32
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Chạy mỗi 6 tiếng
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 jobs:
   run-stream:
     runs-on: ubuntu-latest
-    timeout-minutes: 360 # Giới hạn tối đa 6 tiếng cho cả job
+    timeout-minutes: 360
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -21,26 +21,31 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
-          # Vòng lặp để đảm bảo tính liên tục
-          # Chạy stream trong 5 tiếng 59 phút (21540 giây)
           echo "Bắt đầu chu kỳ stream..."
           
+          # 1. Chạy FFmpeg: Ghi đè file TS và cập nhật danh sách
+          # -segment_wrap 3: Sẽ chỉ tạo ra output000.ts, 001.ts, 002.ts rồi ghi đè vòng tròn
           timeout 21540 ffmpeg -y \
             -re -i "https://vpsttt.vietanhtv.top/tv360/tv360.php?id=32" \
             -c copy -map 0 -f segment \
-            -segment_list index.m3u8 -segment_wrap 3 \
+            -segment_list index.m3u8 \
+            -segment_list_flags +live \
+            -segment_wrap 3 \
             -segment_time 10 output%03d.ts
             
-          echo "Đã kết thúc thời gian stream 6 tiếng."
+          echo "Kết thúc thời gian stream 6 tiếng."
           
-          # Xóa các file cũ trước khi kết thúc
-          rm -f *.ts
-          git add index.m3u8
-          git commit -m "Cleanup: $(date)" || echo "Nothing to commit"
-          git push origin main
+          # 2. Xóa các file thừa (nếu có file cũ sót lại)
+          # Lệnh này đảm bảo chỉ giữ lại đúng 3 file ts và 1 file m3u8
+          find . -maxdepth 1 -name "output*.ts" | grep -vE "output000\.ts|output001\.ts|output002\.ts" | xargs rm -f
           
-          # Dừng lại 1 phút theo yêu cầu
-          echo "Hệ thống tạm nghỉ 1 phút trước khi khởi động lại..."
+          # 3. Đẩy lên GitHub
+          git add index.m3u8 output*.ts
+          git commit -m "Update HLS Stream segments: $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes"
+          git push origin main --force
+          
+          # 4. Nghỉ 1 phút theo yêu cầu trước khi kết thúc Job
+          echo "Hệ thống tạm nghỉ 1 phút..."
           sleep 60
           
           echo "Hoàn thành chu kỳ."
