@@ -1,4 +1,4 @@
-name: "Stream_Pro_TV_Style_32"
+name: Stream_Pro_TV_Style_32
 
 on:
   schedule:
@@ -19,9 +19,9 @@ jobs:
 
       - name: Start Live Stream
         env:
-          STREAM_KEY: ${{ sểcts.TWITCH_KEY }}
+          STREAM_KEY: ${{ secrets.TWITCH_KEY}}
         run: |
-          SOURCE="https://tpninosaga.duckdns.org/source/tv360.m3u8?id=32&token=NinoExility"
+          SOURCE="https://vpsttt.vietanhtv.top/vieon/vieon.php?id=dong-nai-3"
           
           # Dùng timeout của hệ thống thay vì vòng lặp bash để tránh treo tiến trình
           # 20000 giây = ~5.5 tiếng
