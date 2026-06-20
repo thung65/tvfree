@@ -5,10 +5,11 @@ on:
     - cron: '0 */6 * * *' # Cứ mỗi 6 tiếng nó tự kiểm tra và chạy lại
   workflow_dispatch:
   workflow_call:
+
 jobs:
   run-stream:
     runs-on: ubuntu-latest
-    timeout-minutes: 350 # Ép buộc ngắt toàn bộ job sau 5h50m
+    timeout-minutes: 350 # Giới hạn cứng 5h50m để job tự ngắt
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -16,15 +17,15 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Live Now
+      - name: Start Live Stream
         env:
           STREAM_KEY: ${{ secrets.TWITCH_KEY_2 }}
         run: |
-          SOURCE="https://vpsttt.vietanhtv.top/tv360/tv360.php?id=175"
+          SOURCE="https://tpninosaga.duckdns.org/source/tv360.m3u8?id=175&token=NinoExility"
           
-          # Dùng lệnh 'timeout' để quản lý vòng đời FFmpeg
-          # 20400 giây = 5 giờ 40 phút
-          timeout 20400 ffmpeg -re \
+          # Dùng timeout của hệ thống thay vì vòng lặp bash để tránh treo tiến trình
+          # 20000 giây = ~5.5 tiếng
+          timeout 20000 ffmpeg -re \
             -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 \
             -reconnect_delay_max 5 -rw_timeout 20000000 \
             -headers "Referer: https://vietanhtv.id.vn/"$'\r\n'"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"$'\r\n' \
@@ -32,5 +33,6 @@ jobs:
             -c:v libx264 -preset superfast -b:v 3000k -maxrate 3500k -bufsize 6000k \
             -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 128k -ar 44100 -f flv "rtmps://live.twitch.tv/app/$STREAM_KEY"
-            
-          echo "Luồng đã kết thúc hoặc bị timeout. Đang giải phóng tài nguyên..."
+          
+          echo "Stream đã tự động ngắt sau thời gian quy định."
+
